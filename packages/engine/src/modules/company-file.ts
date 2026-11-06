@@ -47,14 +47,14 @@ export type CompanyFile = z.input<typeof fileSchema>;
 const SETTINGS_KEYS = [
   'companyName', 'tradingName', 'regNumber', 'vatNumber', 'address', 'phone', 'email', 'website', 'bankDetails', 'businessType', 'vatRegistered', 'vatRateBp', 'fyEndMonth',
   'invoicePrefix', 'invoicePad', 'quotePrefix', 'quotePad', 'paymentDays', 'quoteValidDays', 'invoiceTerms', 'quoteTerms', 'markupBp', 'lockDate',
-  'creditPrefix', 'creditPad', 'proformaPrefix', 'payshapId', 'vatCategory', 'turnoverTax',
+  'creditPrefix', 'creditPad', 'proformaPrefix', 'payshapId', 'vatCategory', 'turnoverTax', 'approvedPbo',
 ] as const;
 const SETTINGS_COLUMNS: Record<(typeof SETTINGS_KEYS)[number], string> = {
   companyName: 'company_name', tradingName: 'trading_name', regNumber: 'reg_number', vatNumber: 'vat_number', address: 'address', phone: 'phone', email: 'email',
   website: 'website', bankDetails: 'bank_details', businessType: 'business_type', vatRegistered: 'vat_registered', vatRateBp: 'vat_rate_bp', fyEndMonth: 'fy_end_month', invoicePrefix: 'invoice_prefix',
   invoicePad: 'invoice_pad', quotePrefix: 'quote_prefix', quotePad: 'quote_pad', paymentDays: 'payment_days', quoteValidDays: 'quote_valid_days',
   invoiceTerms: 'invoice_terms', quoteTerms: 'quote_terms', markupBp: 'markup_bp', lockDate: 'lock_date',
-  creditPrefix: 'credit_prefix', creditPad: 'credit_pad', proformaPrefix: 'proforma_prefix', payshapId: 'payshap_id', vatCategory: 'vat_category', turnoverTax: 'turnover_tax',
+  creditPrefix: 'credit_prefix', creditPad: 'credit_pad', proformaPrefix: 'proforma_prefix', payshapId: 'payshap_id', vatCategory: 'vat_category', turnoverTax: 'turnover_tax', approvedPbo: 'approved_pbo',
 };
 
 export async function exportCompanyFile(tx: Tx | import('../db/index.js').Sql): Promise<CompanyFile> {
@@ -97,7 +97,8 @@ export async function exportCompanyFile(tx: Tx | import('../db/index.js').Sql): 
 }
 
 export async function restoreCompanyFile(tx: Tx, raw: unknown) {
-  const file = parse(fileSchema, raw);
+  // A company file can hold years of jobs: more room than a request.
+  const file = parse(fileSchema, raw, { maxItems: 500_000 });
   const done: Record<string, number> = {};
   const count = (k: string) => (done[k] = (done[k] ?? 0) + 1);
 
@@ -220,7 +221,7 @@ export function registerCompanyFileRoutes(app: FastifyInstance, ctx: Ctx): void 
 
   app.post('/api/company-file', { preHandler: requireRole('owner') }, async (req) => {
     const user = userOrThrow(req);
-    const { file } = parse(z.object({ file: z.unknown() }), req.body);
+    const { file } = parse(z.object({ file: z.unknown() }), req.body, { maxItems: 500_000 });
     const result = await sql.begin(async (tx) => {
       const r = await restoreCompanyFile(tx, file);
       await audit(tx, { userId: user.id, action: 'restore_company_file', entity: 'settings', ip: req.ip, details: r });
