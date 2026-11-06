@@ -78,7 +78,8 @@ function Editor({ detail, kind, proforma, projectFromUrl, reload }: { detail: Do
   const clients = useApi<ClientRow[]>(isOwner ? '/api/clients' : null);
   // What the trade's standard items typically cost (anonymous market rates), shown under a line.
   const [market, setMarket] = useState<MarketRange[]>([]);
-  useEffect(() => void marketRanges(settings.industry).then(setMarket), [settings.industry]);
+  const sharing = Boolean(settings.marketConsent && settings.marketNoticeSeen);
+  useEffect(() => void marketRanges(settings.industry, sharing).then(setMarket), [settings.industry, sharing]);
   const hasBrands = useHasBrands();
   const doc = detail?.doc;
   const credit = kind === 'credit_note';
