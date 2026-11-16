@@ -3,6 +3,7 @@
  * changed since the last one sent. All data made up.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { pocketShareSchema } from '@shap/shared';
 import { expectCleanAudit, login, ref, setup, type TestEnv } from './helpers.js';
 import type { ShareFile } from '../src/modules/share.js';
 
@@ -15,6 +16,8 @@ describe('sharing the books with the accountant', () => {
     expect(r.statusCode, r.body).toBe(200);
     expect(r.headers['content-disposition']).toMatch(/attachment; filename=".* share \d+ \d{4}-\d{2}-\d{2}\.json"/);
     const f = JSON.parse(r.body) as ShareFile;
+    // What Shap reads: the one schema both use.
+    expect(pocketShareSchema.safeParse(f).success).toBe(true);
     expect([made.transactions, made.changes.added]).toEqual([f.totals.transactions, f.changes.added.length]);
     return f;
   };

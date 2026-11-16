@@ -15,7 +15,7 @@
  * so a share that was cancelled doesn't move the "changed since" mark.
  */
 import type { App as FastifyInstance } from '../http.js';
-import { sha256Hex } from '@shap/shared';
+import { POCKET_SHARE_FORMAT, sha256Hex } from '@shap/shared';
 import { z } from 'zod';
 import { requireRole, userOrThrow } from '../auth.js';
 import type { Ctx } from '../context.js';
@@ -25,7 +25,8 @@ import { freshTotals, getSettings, today } from '../lib/books.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { parse } from '../lib/validate.js';
 
-export const SHARE_FORMAT = 'shap-pocket-share/1';
+/** The format, the same schema in Shap and here (packages/shared pocket-share.ts). */
+export const SHARE_FORMAT = POCKET_SHARE_FORMAT;
 
 export interface ShareTransaction {
   /** The same transaction in every share: what it came from and its id. */
