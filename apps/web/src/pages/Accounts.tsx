@@ -3,7 +3,9 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ACCOUNT_TYPE_LABELS, addMonths, ASSET_CATEGORIES, ASSET_DEFAULT_LIFE_MONTHS, INTANGIBLE_CATEGORIES, ASSET_CATEGORY_LABELS, ESTIMATE_NOTE, financialYear, formatAmount, formatDate, formatZar, LEDGER_SOURCE_LABELS, todayIso, vatIncluded, vatOn, type AssetCategory, equityHeading } from '@shap/shared';
 import { PageHead } from '../components/Shell';
 import { Drawer, Empty, ErrorBox, Field, Icon, Loading, Money, MoneyInput, Segmented, Tabs, useToast } from '../components/ui';
-import { api, ApiError } from '../lib/api';
+import { api, apiBlob, ApiError } from '../lib/api';
+import { shareFile } from '../lib/native';
+import { UNEXPECTED } from '../lib/words';
 import { FileButton } from '../components/Files';
 import { useApi } from '../lib/hooks';
 import { useAuthed } from '../lib/session';
@@ -1111,6 +1113,57 @@ function BalanceChecks() {
  * the year in the books, Shap's estimate of the income tax and the IRP6 estimates, the VAT201s,
  * payroll (EMP201, EMP501), dividends, and the assets bought and sold.
  */
+/**
+ * Share with your accountant: the whole of the books as one stamped file, sent from the phone's
+ * share sheet, for their Shap (Shap Accountant). Each share says what changed since the last one
+ * sent; a cancelled share doesn't count (engine modules/share.ts).
+ */
+function ShareBooks() {
+  const toast = useToast();
+  const status = useApi<{ last: { number: number; madeAt: string; sentAt: string } | null; changedSince: number | null }>('/api/share');
+  const [busy, setBusy] = useState(false);
+  const go = async () => {
+    setBusy(true);
+    try {
+      const made = await api<{ number: number; through: string; transactions: number; changes: { added: number; changed: number; removed: number }; previous: { number: number } | null }>('/api/share', { body: {} });
+      const { blob, filename } = await apiBlob(`/api/share/${made.number}/file`);
+      const changed = made.changes.added + made.changes.changed + made.changes.removed;
+      const how = await shareFile(blob, filename, `Books to ${formatDate(made.through)}`, made.previous ? `Share ${made.number}: ${changed} ${changed === 1 ? 'change' : 'changes'} since share ${made.previous.number}.` : `Share ${made.number}: the whole of the books.`);
+      if (how === 'cancelled') return;
+      await api(`/api/share/${made.number}/sent`, { body: {} });
+      toast(how === 'downloaded' ? 'Saved: send it to your accountant' : 'Shared');
+      await status.reload();
+    } catch (err) {
+      if (!(err instanceof ApiError)) console.error(err);
+      toast(err instanceof ApiError ? err.message : UNEXPECTED, 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const last = status.data?.last;
+  return (
+    <section className="panel panel-pad stack-sm">
+      <div>
+        <strong>Share your books with your accountant</strong>
+        <div className="xs muted">
+          The whole of the books as one file, for your accountant’s Shap: every entry, with its date, reference and description (which can name your customers and suppliers), your accounts and your business’s details. It goes only where you send it. Each share is numbered, and says what changed since the last one you sent.
+        </div>
+      </div>
+      {last && (
+        <div className="small">
+          Last sent: share {last.number}, {formatDate(String(last.sentAt).slice(0, 10))}.{' '}
+          {status.data?.changedSince ? `${status.data.changedSince} ${status.data.changedSince === 1 ? 'entry has' : 'entries have'} changed since.` : 'Nothing has changed since.'}
+        </div>
+      )}
+      <div className="row wrap">
+        <button className="btn primary" disabled={busy} onClick={() => void go()}>
+          {busy ? 'Making the file…' : last ? 'Share them again' : 'Share them'}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function TaxPack() {
   const { settings } = useAuthed();
   const toast = useToast();
@@ -1186,6 +1239,7 @@ function Exports() {
   );
   return (
     <div className="stack">
+      <ShareBooks />
       <TaxPack />
       <PeriodPicker from={range.from} to={range.to} onChange={(from, to) => setRange({ from, to })} />
       <ExportStudio from={range.from} to={range.to} />
