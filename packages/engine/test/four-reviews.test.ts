@@ -204,6 +204,8 @@ describe('locks that hold', () => {
 
 describe('closed and signed years stay so', () => {
   async function approved(env: TestEnv, me: Me) {
+    // Someone named to approve the statements (the phone's user is "Owner" until they say: details.ts).
+    await env.sql`update users set name = 'Made-up Owner' where name = 'Owner'`;
     const r = await ref(env.sql);
     const { settings } = await me.get('/api/reference');
     await me.post('/api/settings', { ...settings, fyEndMonth: 2, features: { ...settings.features, statements: true } }, 'PUT');

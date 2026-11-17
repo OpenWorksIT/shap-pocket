@@ -2,6 +2,26 @@
 
 What changed in each version of Shap Pocket, newest first.
 
+## 1.11.0 (17 November 2026)
+
+- **Share your books with your accountant** (Accounts → Export). One file of your books for your
+  accountant's Shap: your invoices, costs, assets, pay runs, journals and the rest, with their
+  dates, references and descriptions (which can name your customers, suppliers, workers, employees
+  and shareholders and what you paid them), your accounts and your business's details. Photos of
+  your slips, people's ID, tax and bank numbers, and contact details stay on your phone. Nothing
+  goes until you choose where on the share sheet, and then only there: OpenWorks never gets it.
+  Each share is numbered and says what's new, changed or gone since the last one you shared.
+- **Who approves your statements is named by you.** The statements aren't compiled until someone is
+  named to approve them (in the statements' details); the phone's "Owner" placeholder never is.
+- From Shap's reviews, in the accounting code Pocket shares with it:
+  - Xero's trial balance is read from its year-to-date columns when you move in.
+  - 4 November 2026 (the local government elections) is a public holiday.
+  - "R (1 234.56)" and "1 234.56 Cr" in a moved-in file are read as credits.
+  - Depreciation posted by journal is added back in the statement of cash flows, and a cost put right
+    as an asset by journal shows as an asset bought.
+  - Books that begin with the opening balances moved in say the years shown start from nil before
+    them.
+
 ## 1.10.2 (13 November 2026)
 
 From the reviews of 1.10.1.

@@ -111,3 +111,19 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
     and send", `hasGoneOut`) is read from the source by `web-actions.test.ts`. "Asks for no
     payment" overstated it (a draft still shows its due date and terms): "without your payment
     details". `pocket.test.ts` issues an invoice, so it ends with `expectCleanAudit`.
+- **1.11.0** (Share your books with your accountant; Shap 1.29's five reviews, each reading both
+  apps: Shap's section 7, "The five reviews of 1.29 and Shap Pocket 1.11"): the share carried only
+  postings, so the accountant's Shap worked the VAT201s, payroll, tax and statements out from less
+  than Pocket has: it carries the books' records now (`SHARE_TABLES` in the shared
+  pocket-share.ts, people's ID, tax and bank numbers, contact details, photos and the phone's
+  user left out), with every entry's hashes and these books' own id (migration 044), checked
+  against Shap's schema before it's offered. Pocket's own: the last share's marks were read back
+  with their keys renamed by the database layer, so credit notes, write-offs and the like counted
+  as changed every time (kept as text now); lines in a different order changed an entry's hash
+  (sorted); an entry moved to another day counted as one gone and one new (once); the panel's
+  words (`SHARE_WHAT_GOES`), "Last shared" dated in South Africa, the share sheet's message, the
+  balance refusal; the cited holiday's address on the hosts list; the phone's "Owner" placeholder
+  is never named to approve the statements; and from the shared statements code, a cost put right
+  as an asset by journal is an asset bought, and books that begin with a move-in's opening
+  balances say so. Tests: `share.test.ts`, `shared-statements-1.28.test.ts`,
+  `shared-fixes-1.28.test.ts`.
