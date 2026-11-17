@@ -117,7 +117,7 @@ export function FinancialStatements() {
   const looks = (s?.checks ?? []).filter((c) => c.level === 'look');
   const ready = Boolean(s && stops.every((c) => c.ok) && !v?.audit.some((a) => a.level === 'fail'));
   const cc = s?.company?.businessType === 'cc';
-  const report = cc ? 'accounting officer’s report' : 'compiler’s report';
+  const report = cc ? 'accounting officer’s report' : 'compilation report';
   const accountId = (key: string) => (ref.accounts as { id: string; systemKey: string | null }[]).find((a) => a.systemKey === key)?.id;
   const bookTax = async () => {
     if (!s?.taxEstimate) return;
@@ -166,7 +166,7 @@ export function FinancialStatements() {
     <div className="stack">
       <p className="small muted">
         Drawn up from the books under the IFRS for SMEs Accounting Standard: the statement of financial position, of comprehensive income, of changes in equity and of cash flows, with the notes, the {s?.governing.many ?? 'directors'}’ report and a detailed income statement.
-        {' Share the draft with your accountant; when their signed compiler’s report comes back, upload it here, approve, and the year is finished.'}
+        {' Share the draft with your accountant; when their signed compilation report comes back, upload it here, approve, and the year is finished.'}
       </p>
       <div className="row wrap">
         {years.data.map((y) => (
@@ -187,7 +187,7 @@ export function FinancialStatements() {
             </strong>
             {status === 'sent' && v.row?.sentAt && (
               <span className="small">
-                Sent to {v.row.sentTo} on {formatDate(v.row.sentAt.slice(0, 10))}. When the signed compiler’s report comes back, upload it here.
+                Sent to {v.row.sentTo} on {formatDate(v.row.sentAt.slice(0, 10))}. When the signed compilation report comes back, upload it here.
               </span>
             )}
             {(status === 'compiled' || status === 'approved') && v.row?.compiler && (
@@ -223,8 +223,8 @@ export function FinancialStatements() {
               Share or save the PDF
             </button>
             {v.row?.compilerReportId && (
-              <button className="btn quiet" onClick={() => void share(`/api/statements/${s.fyEnd}/compiler-report`, 'Compiler’s report')}>
-                The signed compiler’s report
+              <button className="btn quiet" onClick={() => void share(`/api/statements/${s.fyEnd}/compiler-report`, 'Compilation report')}>
+                The signed compilation report
               </button>
             )}
             {status !== 'approved' && status !== 'compiled' && (
@@ -565,7 +565,7 @@ function UploadForm({ fyEnd, compiler, onClose, onDone }: { fyEnd: string; compi
     }
   };
   return (
-    <Drawer title={cc ? 'The signed accounting officer’s report' : 'The signed compiler’s report'} sub="From your accountant: the report, or the whole signed set" onClose={onClose}>
+    <Drawer title={cc ? 'The signed accounting officer’s report' : 'The signed compilation report'} sub="From your accountant: the report, or the whole signed set" onClose={onClose}>
       <form className="stack" onSubmit={submit}>
         <p className="small muted">Uploading it freezes the statements at their figures as they stand now. Make sure it’s the report for this draft: if the books have changed since you shared it, share it again first.</p>
         <div className="row wrap">

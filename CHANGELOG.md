@@ -5,8 +5,15 @@ What changed in each version of Shap Pocket, newest first.
 ## 1.11.2 (17 November 2026)
 
 - The compiler's report on your financial statements is titled **Practitioner's compilation
-  report**, as the standard it follows (ISRS 4410 (Revised)) titles it. It said "Independent
-  compiler's report", whatever the compiler's independence.
+  report**, as the example reports of the standard it follows (ISRS 4410 (Revised)) title it, and
+  the screens call it the compilation report. It said "Independent compiler's report", whatever the
+  compiler's independence.
+- For a sole proprietor, a partnership or a trust, the report says the statements are prepared for
+  the owner (or the partners, or the trust's beneficiaries) and SARS, and may not be suitable for
+  other purposes; note 1 says "the owner" for a sole proprietor. Addressed to a company's
+  shareholders or a co-op's members, it says the directors provided the information and are
+  responsible for it, and its last sentence names the framework (the standard and the business's
+  Act) as the paragraph before it does.
 
 ## 1.11.1 (17 November 2026)
 

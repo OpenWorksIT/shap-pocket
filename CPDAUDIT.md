@@ -148,5 +148,14 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   `bank.test.ts`, `sales.test.ts`, each failing without its fix. Linking an accountant (Shap's own
   server) doesn't arise: Pocket shares its books by file.
 - **1.11.2** (with Shap 1.31): the compiler's report is titled "Practitioner's compilation report",
-  as ISRS 4410 (Revised) titles it (left from Shap 1.29.1's reviews for Shap and Pocket together).
-  Test: `review-1.7.test.ts`, failing on the old title.
+  as ISRS 4410 (Revised)'s example reports title it (left from Shap 1.29.1's reviews for Shap and
+  Pocket together). Test: `review-1.7.test.ts`, failing on the old title. Shap 1.31's five reviews
+  (Shap's CPDAUDIT.md, "The five reviews of 1.31 and Shap Pocket 1.11.2") then found the report
+  shared with Shap short of ISRS 4410 (Revised) for a special purpose framework (para 40(j),
+  Illustration 2: a sole proprietor's, a partnership's or a trust's statements may not be suitable
+  for other purposes), saying "you" to a company's shareholders and a co-op's members for what the
+  directors provide (para 40(c)-(d)), and naming only the standard in its limitation sentence; and
+  the screens still said "compiler's report". Fixed as in Shap (`statements/pdf.ts`,
+  `statements/details.ts`: `reportAddressee`, `addresseeIsntManagement`, `specialPurposeFor`, the
+  last also note 1's "the owner" for a sole proprietor). Test: `shap-1.31-report.test.ts`, each
+  failing on 1.11.1.

@@ -378,7 +378,7 @@ export default function WelcomePage({ canRestore = true }: { canRestore?: boolea
             <YesNo q="Do clients sometimes pay before you start?" hint="Pro-forma invoices: ask for the money up front, without a tax invoice. Once paid, turn it into the invoice." value={extras.upfront} onChange={extra('upfront')} />
             <YesNo
               q="Should Shap Pocket draw up your annual financial statements?"
-              hint="Yes: they’re prepared from your books (IFRS for SMEs), you send them to your accountant, and once their signed compiler’s report is back here the year is finished. No: your accountant prepares them in their own software from what Shap Pocket gives them."
+              hint="Yes: they’re prepared from your books (IFRS for SMEs), you send them to your accountant, and once their signed compilation report is back here the year is finished. No: your accountant prepares them in their own software from what Shap Pocket gives them."
               value={statements}
               onChange={setStatements}
             />
