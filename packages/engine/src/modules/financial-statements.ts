@@ -237,6 +237,8 @@ export function registerFinancialStatementRoutes(app: FastifyInstance, ctx: Ctx)
     if (!(file.mime === 'application/pdf' || file.mime.startsWith('image/'))) throw badRequest('The signed report as a PDF or a photo');
     const r = await row(sql, fyEnd);
     if (r?.status === 'approved') throw badRequest('These statements are approved already');
+    // A compiled set is reopened before it's compiled again, so the signed one is kept (financial_statement_versions).
+    if (r?.status === 'compiled') throw badRequest('These statements are compiled already: reopen them to compile them again (the signed set is kept).');
     const d = await loadDetails(sql);
     const ready = await readyToSign(sql, fyEnd);
     await sql.begin(async (tx) => {

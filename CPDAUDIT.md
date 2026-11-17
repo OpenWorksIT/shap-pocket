@@ -140,3 +140,10 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   retirement contributions and age) and the logbook's vehicle went too, unsaid: both stay on the
   phone now; the words say which address stays, that a trip's reason goes, and send or save (the
   web app on a computer downloads it). The share-file test makes both and finds neither.
+- **1.11.1** (Shap 1.30's five reviews, Shap's section 7, "The five reviews of 1.30 and Shap Pocket
+  1.11.1"): from the accounting code Pocket shares, a bank line matched to a bill's payment showed
+  as open for good (`matchesFor` had no label for one), matches accepted from the suggestions
+  weren't in the audit log, and a compiled set could have another compiler's report uploaded over
+  it without the signed one being kept: all fixed as in Shap. Tests: `accounting.test.ts`,
+  `bank.test.ts`, `sales.test.ts`, each failing without its fix. Linking an accountant (Shap's own
+  server) doesn't arise: Pocket shares its books by file.

@@ -2,6 +2,14 @@
 
 What changed in each version of Shap Pocket, newest first.
 
+## 1.11.1 (17 November 2026)
+
+- From Shap's reviews of 1.30, in the accounting code Pocket shares with it:
+  - A bank statement line matched to a bill's payment shows as matched (it showed as open).
+  - Matches taken from the bank's suggestions are in the audit log.
+  - Financial statements with a compiler's report already uploaded are reopened before another is
+    uploaded, so the signed set is kept.
+
 ## 1.11.0 (17 November 2026)
 
 - **Share your books with your accountant** (Accounts → Export). One file of the whole of your

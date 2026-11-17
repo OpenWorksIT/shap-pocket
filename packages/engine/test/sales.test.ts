@@ -105,6 +105,9 @@ describe('selling at the counter, VAT registered', () => {
     expect((await me.call({ method: 'POST', url: `/api/statements/${fy}/compile`, payload: {} })).statusCode).toBe(404);
     const file = await me.post('/api/attachments', { filename: 'compiler report.pdf', mime: 'application/pdf', dataBase64: Buffer.from('%PDF-1.4\n% made-up signed report\n').toString('base64') });
     await me.post(`/api/statements/${fy}/compiler-report`, { attachmentId: file.id, compilerName: 'Fictional Accountant', date: '2026-05-01' });
+    // Compiled, it isn't compiled over (Shap's five reviews of 1.30): it's reopened first, so the signed set is kept.
+    const again = await me.call({ method: 'POST', url: `/api/statements/${fy}/compiler-report`, payload: { attachmentId: file.id, compilerName: 'Another Accountant', date: '2026-05-02' } });
+    expect([again.statusCode, again.json().error]).toEqual([400, 'These statements are compiled already: reopen them to compile them again (the signed set is kept).']);
     await me.post(`/api/statements/${fy}/approve`, { name: 'Fictional Owner', date: '2026-05-02' });
     expect((await me.get(`/api/statements/${fy}`)).status).toBe('approved');
     // The year is agreed and closed: nothing more goes into it.
