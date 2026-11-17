@@ -2,6 +2,12 @@
 
 What changed in each version of Shap Pocket, newest first.
 
+## 1.11.2 (17 November 2026)
+
+- The compiler's report on your financial statements is titled **Practitioner's compilation
+  report**, as the standard it follows (ISRS 4410 (Revised)) titles it. It said "Independent
+  compiler's report", whatever the compiler's independence.
+
 ## 1.11.1 (17 November 2026)
 
 - From Shap's reviews of 1.30, in the accounting code Pocket shares with it:

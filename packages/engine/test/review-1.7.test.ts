@@ -77,6 +77,10 @@ describe('Shap Pocket', () => {
     await me.post('/api/statements/details', { directors: [{ name: 'Fictional Member', role: 'Member' }], assurance: 'independent_review', compiler: { name: 'Fictional Reviewer' } }, 'PUT');
     const s = await buildStatements(env.sql, FY);
     expect(await pdfText(await renderStatementsPdf(s, {}))).not.toContain('no audit or review was conducted');
+    // Compiled: the report is titled as ISRS 4410 (Revised) titles it (Shap's reviews of 1.29.1).
+    const compiled = await pdfText(await renderStatementsPdf({ ...s, details: { ...s.details, assurance: 'compiled' } }, { compiler: { name: 'Fictional Accountant', date: '2026-04-01', how: 'uploaded' } }));
+    expect(compiled).toMatch(/Practitioner.s compilation report/);
+    expect(compiled).not.toMatch(/Independent compiler/);
   });
 
   it('shows no investing outflow for an asset’s bill the owner paid personally', async () => {

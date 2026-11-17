@@ -147,3 +147,6 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   it without the signed one being kept: all fixed as in Shap. Tests: `accounting.test.ts`,
   `bank.test.ts`, `sales.test.ts`, each failing without its fix. Linking an accountant (Shap's own
   server) doesn't arise: Pocket shares its books by file.
+- **1.11.2** (with Shap 1.31): the compiler's report is titled "Practitioner's compilation report",
+  as ISRS 4410 (Revised) titles it (left from Shap 1.29.1's reviews for Shap and Pocket together).
+  Test: `review-1.7.test.ts`, failing on the old title.
