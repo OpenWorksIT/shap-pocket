@@ -87,6 +87,9 @@ export function defaultPolicies(bt: BusinessType, ctx: PolicyContext = { lives: 
   };
 }
 
+/** The name the app gives the phone's one user before they give their own (auth.ts). */
+const PHONE_OWNER = 'Owner';
+
 /** The defaults for a business that hasn't filled anything in yet. */
 export function defaultDetails(bt: BusinessType, owners: string[] = []): StatementDetails {
   const kind = entity(bt);
@@ -105,7 +108,9 @@ export function defaultDetails(bt: BusinessType, owners: string[] = []): Stateme
 export async function loadDetails(db: Db): Promise<StatementDetails> {
   const [s] = await db<{ businessType: BusinessType }[]>`select business_type from settings where id`;
   const [row] = await db<{ details: Record<string, unknown> }[]>`select details from statement_details where id`;
-  const owners = (await db<{ name: string }[]>`select name from users where role = 'owner' and active order by created_at limit 4`).map((u) => u.name);
+  // The phone's own user starts as "Owner" (auth.ts): a placeholder, never someone's name on the
+  // signature line, so nobody is named until the owner names themself (the approvers check fails).
+  const owners = (await db<{ name: string }[]>`select name from users where role = 'owner' and active order by created_at limit 4`).map((u) => u.name.trim()).filter((n) => n && n !== PHONE_OWNER);
   const base = defaultDetails(s!.businessType, owners);
   if (!row) return base;
   const saved = statementDetailsInput.safeParse(row.details);

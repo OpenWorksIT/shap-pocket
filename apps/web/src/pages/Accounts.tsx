@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ACCOUNT_TYPE_LABELS, addMonths, ASSET_CATEGORIES, ASSET_DEFAULT_LIFE_MONTHS, INTANGIBLE_CATEGORIES, ASSET_CATEGORY_LABELS, ESTIMATE_NOTE, financialYear, formatAmount, formatDate, formatZar, LEDGER_SOURCE_LABELS, todayIso, vatIncluded, vatOn, type AssetCategory, equityHeading } from '@shap/shared';
+import { ACCOUNT_TYPE_LABELS, addMonths, dayOf, pocketShareMessage, SHARE_WHAT_GOES, ASSET_CATEGORIES, ASSET_DEFAULT_LIFE_MONTHS, INTANGIBLE_CATEGORIES, ASSET_CATEGORY_LABELS, ESTIMATE_NOTE, financialYear, formatAmount, formatDate, formatZar, LEDGER_SOURCE_LABELS, todayIso, vatIncluded, vatOn, type AssetCategory, equityHeading } from '@shap/shared';
 import { PageHead } from '../components/Shell';
 import { Drawer, Empty, ErrorBox, Field, Icon, Loading, Money, MoneyInput, Segmented, Tabs, useToast } from '../components/ui';
 import { api, apiBlob, ApiError } from '../lib/api';
@@ -1125,10 +1125,10 @@ function ShareBooks() {
   const go = async () => {
     setBusy(true);
     try {
-      const made = await api<{ number: number; through: string; transactions: number; changes: { added: number; changed: number; removed: number }; previous: { number: number } | null }>('/api/share', { body: {} });
+      const made = await api<{ number: number; through: string; entries: number; changes: { added: number; changed: number; removed: number }; previous: { number: number } | null }>('/api/share', { body: {} });
       const { blob, filename } = await apiBlob(`/api/share/${made.number}/file`);
-      const changed = made.changes.added + made.changes.changed + made.changes.removed;
-      const how = await shareFile(blob, filename, `Books to ${formatDate(made.through)}`, made.previous ? `Share ${made.number}: ${changed} ${changed === 1 ? 'change' : 'changes'} since share ${made.previous.number}.` : `Share ${made.number}: the whole of the books.`);
+      const changes = made.changes.added + made.changes.changed + made.changes.removed;
+      const how = await shareFile(blob, filename, `Books to ${formatDate(made.through)}`, pocketShareMessage({ number: made.number, through: made.through, previous: made.previous?.number ?? null, changes }, formatDate));
       if (how === 'cancelled') return;
       await api(`/api/share/${made.number}/sent`, { body: {} });
       toast(how === 'downloaded' ? 'Saved: send it to your accountant' : 'Shared');
@@ -1145,13 +1145,11 @@ function ShareBooks() {
     <section className="panel panel-pad stack-sm">
       <div>
         <strong>Share your books with your accountant</strong>
-        <div className="xs muted">
-          The whole of the books as one file, for your accountant’s Shap: every entry, with its date, reference and description (which can name your customers and suppliers), your accounts and your business’s details. It goes only where you send it. Each share is numbered, and says what changed since the last one you sent.
-        </div>
+        <div className="xs muted">{SHARE_WHAT_GOES}</div>
       </div>
       {last && (
         <div className="small">
-          Last sent: share {last.number}, {formatDate(String(last.sentAt).slice(0, 10))}.{' '}
+          Last shared: share {last.number}, {formatDate(dayOf(last.sentAt))}.{' '}
           {status.data?.changedSince ? `${status.data.changedSince} ${status.data.changedSince === 1 ? 'entry has' : 'entries have'} changed since.` : 'Nothing has changed since.'}
         </div>
       )}

@@ -20,6 +20,8 @@ describe('Shap 1.22’s review fixes, in Shap Pocket', () => {
 
   beforeAll(async () => {
     env = await setup();
+    // Someone named to approve the statements (the phone's user is "Owner" until they say: details.ts).
+    await env.sql`update users set name = 'Made-up Owner' where name = 'Owner'`;
     me = await login(env.app);
     const { settings, sources } = await me.get('/api/reference');
     await me.post('/api/settings', { ...settings, vatRegistered: true, vatNumber: '4740101508', fyEndMonth: 2, features: { ...settings.features, sales: true, bills: true, statements: true } }, 'PUT');
@@ -98,6 +100,8 @@ describe('from the independent review of 1.22, in Shap Pocket', () => {
 
   it('a sale made an invoice stays as sold: its lines don’t change and nothing more is paid on it', async () => {
     env = await setup();
+    // Someone named to approve the statements (the phone's user is "Owner" until they say: details.ts).
+    await env.sql`update users set name = 'Made-up Owner' where name = 'Owner'`;
     me = await login(env.app);
     const { settings } = await me.get('/api/reference');
     await me.post('/api/settings', { ...settings, vatRegistered: false, vatNumber: '', features: { ...settings.features, sales: true } }, 'PUT');

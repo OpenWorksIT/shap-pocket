@@ -1,125 +1,98 @@
 /**
- * Share with your accountant (Shap's docs/ACCOUNTANT.md, "A Shap Pocket share"): the whole of the books as one file the owner sends
- * their accountant, who brings it into Shap (Shap Accountant: a read-only copy of these books in the
- * practice's Shap). Each share is stamped (its number and when it was made), and says what changed
- * since the last one sent, so the accountant sees what's new without comparing.
+ * Share with your accountant (Shap's docs/ACCOUNTANT.md, "A Shap Pocket share"): the books as one
+ * file the owner sends their accountant, who brings it into the practice's Shap (Shap Accountant:
+ * the practice's copy of these books, to compile their statements). Each share is stamped (its
+ * number, when it was made, and these books' own id) and says what changed since the last one sent.
  *
- * What's in it: the business's details Shap needs to read the books (its name, kind, year end, VAT
- * registration and category, turnover tax), the chart of accounts, and every posting in the books,
- * by transaction, with its date, reference and description (which can name the business's own
- * customers and suppliers). Nothing else: no documents' PDFs, no slips, no people's ID numbers or
- * pay details beyond the postings. It goes only where the owner sends it, from the phone's share
- * sheet: nothing is sent from here.
+ * What's in it (packages/shared pocket-share.ts, SHARE_TABLES): the books' own records (invoices,
+ * costs, assets, pay runs, journals and the rest, which name the business's customers, suppliers,
+ * workers, employees and shareholders and what they were paid), the chart of accounts and the
+ * business's details. Left out: who signs in, photos of slips, people's ID, tax and bank numbers,
+ * and contact details. It goes only where the owner sends it, from the phone's share sheet: nothing
+ * is sent from here.
  *
- * Making one keeps it pending; it counts as sent when the share sheet says it went (POST …/sent),
- * so a share that was cancelled doesn't move the "changed since" mark.
+ * Making one keeps it pending; it counts as shared once the share sheet says where it went (POST
+ * …/sent), so one that was cancelled doesn't move the "changed since" mark.
  */
 import type { App as FastifyInstance } from '../http.js';
-import { POCKET_SHARE_FORMAT, sha256Hex } from '@shap/shared';
+import { entryHash, figuresHash, POCKET_SHARE_FORMAT, pocketShareSchema, SHARE_TABLES, SHARE_USER_COLUMNS, shareDiff, shareEntries, type PocketShare } from '@shap/shared';
 import { z } from 'zod';
 import { requireRole, userOrThrow } from '../auth.js';
 import type { Ctx } from '../context.js';
 import type { Db } from '../db/index.js';
 import { audit } from '../lib/audit.js';
-import { freshTotals, getSettings, today } from '../lib/books.js';
-import { badRequest, notFound } from '../lib/errors.js';
+import { freshTotals, today } from '../lib/books.js';
+import { badRequest, HttpError, notFound } from '../lib/errors.js';
 import { parse } from '../lib/validate.js';
 
 /** The format, the same schema in Shap and here (packages/shared pocket-share.ts). */
 export const SHARE_FORMAT = POCKET_SHARE_FORMAT;
+export type ShareFile = PocketShare;
 
-export interface ShareTransaction {
-  /** The same transaction in every share: what it came from and its id. */
-  key: string;
-  date: string;
-  source: string;
-  reference: string;
-  description: string;
-  /** Debit positive, by account code. */
-  lines: { code: string; cents: number; memo: string }[];
-}
+declare const __SHAP_VERSION__: string | undefined;
+const VERSION = typeof __SHAP_VERSION__ === 'string' ? __SHAP_VERSION__ : '';
 
-export interface ShareFile {
-  format: typeof SHARE_FORMAT;
-  stamp: { number: number; madeAt: string; through: string; previous: { number: number; madeAt: string } | null; app: 'Shap Pocket' };
-  business: { companyName: string; tradingName: string; businessType: string; fyEndMonth: number; vatRegistered: boolean; vatCategory: string; vatNumber: string; turnoverTax: boolean; approvedPbo: boolean };
-  accounts: { code: string; name: string; type: string }[];
-  transactions: ShareTransaction[];
-  /** Since the previous share sent: transactions by key. */
-  changes: { added: string[]; changed: string[]; removed: string[] };
-  totals: { transactions: number; debitsCents: number };
-}
+/** The books' entries don't add up (the database checks each journal, so this would be a fault). */
+export const BOOKS_DONT_BALANCE = 'Your books don’t balance, so they can’t be shared (Settings → Checks & audit log shows by how much). That shouldn’t happen: please let us know: tap Feedback, then Bug found.';
 
-const hashOf = (t: ShareTransaction) => sha256Hex(JSON.stringify([t.date, t.reference, t.description, t.lines.map((l) => [l.code, l.cents, l.memo])]));
+const query = (db: Db) => db as unknown as Parameters<typeof shareEntries>[0];
 
-/** Every posting in the books to `through`, by transaction. */
-export async function shareTransactions(db: Db, through: string): Promise<ShareTransaction[]> {
+/** Each entry in the books to `through`: key → its hash (what "changed since" compares). */
+export async function shareMarks(db: Db, through: string) {
   await freshTotals(db);
-  const rows = await db<{ date: string; source: string; sourceId: string | null; memo: string; amountCents: number; code: string; docNumber: string | null }[]>`
-    select l.date::text as date, l.source, l.source_id::text as source_id, coalesce(l.memo, '') as memo, l.amount_cents, a.code, coalesce(d.number, rd.number) as doc_number
-    from ledger l join accounts a on a.id = l.account_id
-    left join documents d on d.id = l.source_id and l.source in ('invoice', 'credit_note', 'write_off')
-    left join receipts r on r.id = l.source_id and l.source = 'receipt'
-    left join documents rd on rd.id = r.invoice_id
-    where l.date <= ${through}::date and l.amount_cents <> 0
-    order by l.date, l.source, l.source_id, a.code`;
-  const by = new Map<string, ShareTransaction>();
-  for (const r of rows) {
-    // One transaction per thing posted (and per day, for what posts on more than one day).
-    const key = `${r.source}:${r.sourceId ?? 'none'}:${r.date}`;
-    let t = by.get(key);
-    if (!t) {
-      t = { key, date: r.date, source: r.source, reference: r.docNumber ?? '', description: r.memo, lines: [] };
-      by.set(key, t);
-    }
-    const same = t.lines.find((l) => l.code === r.code && l.memo === r.memo);
-    if (same) same.cents += Number(r.amountCents);
-    else t.lines.push({ code: r.code, cents: Number(r.amountCents), memo: r.memo });
-  }
-  return [...by.values()].map((t) => ({ ...t, lines: t.lines.filter((l) => l.cents !== 0) })).filter((t) => t.lines.length > 0);
+  const entries = await shareEntries(query(db), through);
+  return { entries, marks: Object.fromEntries(entries.map((e) => [e.key, entryHash(e)])) as Record<string, string> };
 }
 
-/** Builds the next share (pending until it's sent). */
+/**
+ * The books' records, as the database has them (read as JSON text, so no column name is changed on
+ * the way), with what never leaves the phone taken out.
+ */
+export async function shareRecords(db: Db): Promise<Record<string, Record<string, unknown>[]>> {
+  const out: Record<string, Record<string, unknown>[]> = {};
+  for (const t of SHARE_TABLES) {
+    const rows = await db.unsafe<{ j: string }[]>(`select row_to_json(t)::text as j from ${t.table} t`);
+    out[t.table] = rows.map((r) => {
+      const row = JSON.parse(r.j) as Record<string, unknown>;
+      for (const c of t.leaveOut ?? []) delete row[c];
+      for (const c of SHARE_USER_COLUMNS) if (c in row) row[c] = null;
+      return row;
+    });
+  }
+  return out;
+}
+
+/** The marks of the last share sent (stored as text: the database layer leaves its keys alone). */
+async function lastSent(db: Db) {
+  const [last] = await db<{ number: number; madeAt: Date; marks: string }[]>`select number, made_at, marks::text as marks from shares where sent_at is not null order by number desc limit 1`;
+  return last ? { number: last.number, madeAt: new Date(last.madeAt), marks: JSON.parse(last.marks || '{}') as Record<string, string> } : null;
+}
+
+/** Builds the next share (pending until it's sent), checked against the format Shap reads. */
 export async function makeShare(db: Db, userId: string | null): Promise<ShareFile> {
-  const s = await getSettings(db);
   const through = today();
-  const transactions = await shareTransactions(db, through);
-  const off = transactions.reduce((sum, t) => sum + t.lines.reduce((x, l) => x + l.cents, 0), 0);
-  if (off !== 0) throw badRequest('The books don’t balance, so they can’t be shared yet: Settings → Checks says where.');
-  const [last] = await db<{ number: number; madeAt: Date; marks: Record<string, string> }[]>`select number, made_at, marks from shares where sent_at is not null order by number desc limit 1`;
+  const { entries, marks } = await shareMarks(db, through);
+  const off = entries.reduce((sum, t) => sum + t.lines.reduce((x, l) => x + l.cents, 0), 0);
+  if (off !== 0) throw badRequest(BOOKS_DONT_BALANCE);
+  const last = await lastSent(db);
   const [top] = await db<{ n: number | null }[]>`select max(number)::int as n from shares`;
   const number = (top?.n ?? 0) + 1;
-  const marks = Object.fromEntries(transactions.map((t) => [t.key, hashOf(t)]));
-  const before = last?.marks ?? {};
-  const changes = {
-    added: last ? Object.keys(marks).filter((k) => !(k in before)) : [],
-    changed: Object.keys(marks).filter((k) => k in before && before[k] !== marks[k]),
-    removed: Object.keys(before).filter((k) => !(k in marks)),
-  };
+  const [s] = await db<{ booksId: string }[]>`select books_id from settings where id`;
+  const diff = last ? shareDiff(last.marks, marks) : { added: [], changed: [], removed: [] };
   const madeAt = new Date();
-  const accounts = await db<{ code: string; name: string; type: string }[]>`select code, name, type from accounts order by code`;
-  const file: ShareFile = {
+  const file = {
     format: SHARE_FORMAT,
-    stamp: { number, madeAt: madeAt.toISOString(), through, previous: last ? { number: last.number, madeAt: new Date(last.madeAt).toISOString() } : null, app: 'Shap Pocket' },
-    business: {
-      companyName: s.companyName,
-      tradingName: s.tradingName ?? '',
-      businessType: s.businessType,
-      fyEndMonth: s.fyEndMonth,
-      vatRegistered: s.vatRegistered,
-      vatCategory: s.vatCategory,
-      vatNumber: s.vatNumber ?? '',
-      turnoverTax: s.turnoverTax,
-      approvedPbo: Boolean(s.approvedPbo),
-    },
-    accounts,
-    transactions,
-    changes,
-    totals: { transactions: transactions.length, debitsCents: transactions.reduce((sum, t) => sum + t.lines.reduce((x, l) => x + Math.max(l.cents, 0), 0), 0) },
+    stamp: { number, madeAt: madeAt.toISOString(), through, previous: last ? { number: last.number, madeAt: last.madeAt.toISOString() } : null, app: 'Shap Pocket' as const, books: s!.booksId, version: VERSION },
+    records: await shareRecords(db),
+    entries: entries.map((e) => ({ key: e.key, hash: marks[e.key]!, figures: figuresHash(e) })),
+    changes: { added: diff.added.length, changed: diff.changed.length, removed: diff.removed.length },
   };
+  // What Shap reads: the same schema. A file it would refuse is never offered.
+  const checked = pocketShareSchema.safeParse(file);
+  if (!checked.success) throw new HttpError(500, 'Shap Pocket couldn’t make a share your accountant’s Shap can read. That shouldn’t happen: please let us know: tap Feedback, then Bug found.', 'internal');
   // One pending at a time: an older one that never went is dropped.
   await db`delete from shares where sent_at is null`;
-  await db`insert into shares (number, made_at, through, marks, made_by, file) values (${number}, ${madeAt}, ${through}::date, ${db.json(marks as never)}, ${userId}, ${db.json(file as never)})`;
+  await db`insert into shares (number, made_at, through, marks, made_by, file) values (${number}, ${madeAt}, ${through}::date, ${JSON.stringify(marks)}, ${userId}, ${JSON.stringify(file)})`;
   return file;
 }
 
@@ -127,40 +100,41 @@ export function registerShareRoutes(app: FastifyInstance, ctx: Ctx): void {
   const { sql } = ctx;
   const owner = { preHandler: requireRole('owner') };
 
-  /** Where the shares stand: the last one sent, and what's changed in the books since. */
+  /** Where the shares stand: the last one shared, and what's changed in the books since. */
   app.get('/api/share', owner, async () => {
-    const [last] = await sql<{ number: number; madeAt: Date; sentAt: Date; marks: Record<string, string> }[]>`select number, made_at, sent_at, marks from shares where sent_at is not null order by number desc limit 1`;
+    const [sent] = await sql<{ sentAt: Date }[]>`select sent_at from shares where sent_at is not null order by number desc limit 1`;
+    const last = await lastSent(sql);
     if (!last) return { last: null, changedSince: null };
-    const now = Object.fromEntries((await shareTransactions(sql, today())).map((t) => [t.key, hashOf(t)]));
-    const before = last.marks ?? {};
-    const changedSince = Object.keys(now).filter((k) => before[k] !== now[k]).length + Object.keys(before).filter((k) => !(k in now)).length;
-    return { last: { number: last.number, madeAt: last.madeAt, sentAt: last.sentAt }, changedSince };
+    const { marks } = await shareMarks(sql, today());
+    const d = shareDiff(last.marks, marks);
+    return { last: { number: last.number, madeAt: last.madeAt, sentAt: sent!.sentAt }, changedSince: d.added.length + d.changed.length + d.removed.length };
   });
 
   /** Make the next share (then fetch its file for the share sheet). */
   app.post('/api/share', owner, async (req) => {
     const user = userOrThrow(req);
     const file = await sql.begin((tx) => makeShare(tx, user.id));
-    await audit(sql, { userId: user.id, action: 'make_share', entity: 'share', entityId: String(file.stamp.number), ip: req.ip, details: { transactions: file.totals.transactions } });
-    return { number: file.stamp.number, through: file.stamp.through, transactions: file.totals.transactions, changes: { added: file.changes.added.length, changed: file.changes.changed.length, removed: file.changes.removed.length }, previous: file.stamp.previous };
+    await audit(sql, { userId: user.id, action: 'make_share', entity: 'share', entityId: String(file.stamp.number), ip: req.ip, details: { entries: file.entries.length } });
+    return { number: file.stamp.number, through: file.stamp.through, entries: file.entries.length, changes: file.changes, previous: file.stamp.previous };
   });
 
   /** A share's file, while it hasn't gone. */
   app.get('/api/share/:number/file', owner, async (req, reply) => {
     const { number } = parse(z.object({ number: z.coerce.number().int().positive() }), req.params);
-    const [r] = await sql<{ file: ShareFile | null }[]>`select file from shares where number = ${number}`;
+    const [r] = await sql<{ file: string | null; through: string }[]>`select file::text as file, through::text as through from shares where number = ${number}`;
     if (!r?.file) throw notFound('Share');
-    const name = `${r.file.business.companyName.replace(/[^\w .-]+/g, '').trim() || 'Books'} share ${number} ${r.file.stamp.through}.json`;
+    const [s] = await sql<{ companyName: string }[]>`select company_name from settings where id`;
+    const name = `${(s?.companyName ?? '').replace(/[^\w .-]+/g, '').trim() || 'Books'} share ${number} ${r.through}.json`;
     reply.header('content-type', 'application/json; charset=utf-8');
     reply.header('content-disposition', `attachment; filename="${name}"`);
-    return reply.send(JSON.stringify(r.file));
+    return reply.send(r.file);
   });
 
-  /** The share sheet said it went: the next share's "changed since" counts from this one. */
+  /** The share sheet said where it went: the next share's "changed since" counts from this one. */
   app.post('/api/share/:number/sent', owner, async (req) => {
     const user = userOrThrow(req);
     const { number } = parse(z.object({ number: z.coerce.number().int().positive() }), req.params);
-    // Sent: its marks stay (the next share compares with them), its file goes.
+    // Shared: its marks stay (the next share compares with them), its file goes.
     const [r] = await sql<{ number: number }[]>`update shares set sent_at = coalesce(sent_at, now()), file = null where number = ${number} returning number`;
     if (!r) throw notFound('Share');
     await audit(sql, { userId: user.id, action: 'share_sent', entity: 'share', entityId: String(number), ip: req.ip });

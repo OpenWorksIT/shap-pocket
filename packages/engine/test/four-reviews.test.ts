@@ -29,6 +29,8 @@ describe('a sale’s invoice stays as it was issued', () => {
   let client: { id: string };
   beforeAll(async () => {
     env = await setup();
+    // Someone named to approve the statements (the phone's user is "Owner" until they say: details.ts).
+    await env.sql`update users set name = 'Made-up Owner' where name = 'Owner'`;
     ({ me, till, client } = await shop(env, { features: { timeTracker: true, jobs: true } }));
   });
   afterAll(async () => {
@@ -102,6 +104,8 @@ describe('zero-rated goods at the counter (VAT Act s20(5) proviso, s20(6))', () 
   let client: { id: string };
   beforeAll(async () => {
     env = await setup();
+    // Someone named to approve the statements (the phone's user is "Owner" until they say: details.ts).
+    await env.sql`update users set name = 'Made-up Owner' where name = 'Owner'`;
     ({ me, till, client } = await shop(env));
   });
   afterAll(async () => {
@@ -128,6 +132,8 @@ describe('locks that hold', () => {
   let till: string;
   beforeAll(async () => {
     env = await setup();
+    // Someone named to approve the statements (the phone's user is "Owner" until they say: details.ts).
+    await env.sql`update users set name = 'Made-up Owner' where name = 'Owner'`;
     ({ me, till } = await shop(env, { features: { bank: true, inventory: true } }));
   });
   afterAll(async () => {

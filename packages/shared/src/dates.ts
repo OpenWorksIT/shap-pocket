@@ -4,6 +4,11 @@ export function todayIso(timeZone = 'Africa/Johannesburg'): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
 
+/** The day a moment fell on in South Africa (a timestamp's own date is UTC's, a day behind before 02:00). */
+export function dayOf(at: string | Date, timeZone = 'Africa/Johannesburg'): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(at));
+}
+
 export function addDays(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
@@ -66,16 +71,16 @@ export function formatDate(iso: string | null | undefined, style: 'short' | 'lon
 }
 
 /**
- * South Africa's public holidays in a year (Public Holidays Act 36 of 1994): a holiday on a
- * Sunday is also kept on the Monday after. One-off days the President declares (an election day,
- * say) aren't known in advance and aren't here.
- */
-/**
  * Public holidays the President declares for one year only (Public Holidays Act s2A), such as an
  * election day: checked with each update, the same as SARS's tables (Shap's docs/SARS.md).
  * 4 November 2026, the local government elections: https://www.sanews.gov.za/node/84344
  */
 export const DECLARED_HOLIDAYS: readonly string[] = ['2026-11-04'];
+
+/**
+ * South Africa's public holidays in a year (Public Holidays Act 36 of 1994): a holiday on a
+ * Sunday is also kept on the Monday after, and the days declared for one year (above) are in.
+ */
 
 export function publicHolidays(year: number): Set<string> {
   // Easter Sunday (the anonymous Gregorian computus).

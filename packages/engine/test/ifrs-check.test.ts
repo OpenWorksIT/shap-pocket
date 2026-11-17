@@ -21,6 +21,8 @@ describe('the statements, checked against IFRS for SMEs (Shap Pocket)', () => {
 
   beforeAll(async () => {
     env = await setup();
+    // Someone named to approve the statements (the phone's user is "Owner" until they say: details.ts).
+    await env.sql`update users set name = 'Made-up Owner' where name = 'Owner'`;
     me = await login(env.app);
     const { settings, sources } = await me.get('/api/reference');
     await me.post('/api/settings', { ...settings, companyName: 'Fictional Works (Pty) Ltd', regNumber: '2021/654321/07', vatRegistered: true, vatNumber: '4740101508', fyEndMonth: 2, address: '1 Test Street, Fictional Town, 0001', features: { ...settings.features, statements: true, bills: true } }, 'PUT');
@@ -81,6 +83,8 @@ describe('a close corporation (Shap Pocket)', () => {
 
   it('carries the accounting officer’s report and the score', async () => {
     env = await setup();
+    // Someone named to approve the statements (the phone's user is "Owner" until they say: details.ts).
+    await env.sql`update users set name = 'Made-up Owner' where name = 'Owner'`;
     const me = await login(env.app);
     const { settings } = await me.get('/api/reference');
     await me.post('/api/settings', { ...settings, businessType: 'cc', companyName: 'Fictional Plumbing CC', regNumber: '2005/012345/23', fyEndMonth: 2, address: '1 Test Street, Fictional Town, 0001', features: { ...settings.features, statements: true } }, 'PUT');

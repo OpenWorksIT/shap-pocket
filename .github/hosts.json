@@ -7,6 +7,11 @@
    "why": "SARS guides and forms, linked and cited"
   },
   {
+   "host": "www.sanews.gov.za",
+   "kind": "link",
+   "why": "the government news agency's notice of a declared public holiday, cited in the shared dates.ts (as in Shap's)"
+  },
+  {
    "host": "www.openworks.co.za",
    "kind": "link",
    "why": "the terms, privacy policy and info pages"
