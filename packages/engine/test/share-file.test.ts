@@ -63,6 +63,9 @@ describe('what a share carries, and what the panel says goes', () => {
     await me.post('/api/trips', { date: '2026-10-12', fromPlace: 'Made-up Depot', toPlace: '12 Made-up Close, Walmer', reason: 'Quote (made up)', km: 18 });
     await me.post('/api/employees', { name: 'Made-up Lindiwe', idNumber: '8001015009087', taxNumber: '0121212120', salaryCents: 1_000_000, startDate: '2026-03-01', bankDetails: 'Made-up Bank 000000' });
     await me.post('/api/statements/details', { directors: [{ name: 'Made-up Owner', role: 'Director' }], secretary: 'Made-up Secretary', registeredAddress: '3 Made-up Street, Fictional Town', bankers: 'Made-up Bankers' }, 'PUT');
+    // A sole proprietor's kind of tax estimate, with their own income from elsewhere, and the logbook's year.
+    await me.post('/api/tax-estimates', { fyEnd: '2027-02-28', period: 1, asAt: '2026-05-31', kind: 'individual', ageBand: '65to74', otherIncomeCents: 7_777_700, retirementCents: 3_333_300, payeCents: 1_212_100, note: 'Made-up note on a salary elsewhere', lines: [{ accountId: null, name: 'Sales', type: 'income', actualCents: 0, projectedCents: 30_000_000 }] });
+    await me.post('/api/logbook/2027-02-28', { vehicle: 'Made-up bakkie CA 999-999', odometerStart: 100_000, odometerEnd: 130_000 }, 'PUT');
     // A cost dated after today.
     await me.post('/api/costs', { date: '2026-12-20', description: 'Later cost (made up)', supplier: 'Made-up Future', amountCents: 1_000, categoryId: await r.cat('Parts'), sourceId: bank });
     one = await share(1);
@@ -93,16 +96,23 @@ describe('what a share carries, and what the panel says goes', () => {
     expect(SHARE_WHAT_GOES).toMatch(/customers, suppliers, workers, employees, partners and shareholders and what you paid them \(and, for payroll, your employees’ age bands and medical aid members\)/);
   });
 
-  it('leaves on the phone what the panel says it does: trips’ places, the business’s address, people’s numbers and contact details', () => {
+  it('leaves on the phone what the panel says it does: trips’ places, the vehicle, the tax estimates, the business’s address, people’s numbers and contact details', async () => {
     const trip = one.records.trips!.find((t) => t.km === 18)!;
     expect(trip).toMatchObject({ date: '2026-10-12', reason: 'Quote (made up)' });
     expect(trip).not.toHaveProperty('to_place');
     expect(trip).not.toHaveProperty('from_place');
-    for (const never of ['12 Made-up Close', 'Made-up Depot', '7 Made-up Lane', 'guesthouse@example.co.za', '0825550100', '1 Made-up Road', '0825550199', '8001015009087', '0121212120', 'Made-up Bank 000000'])
+    expect(one.records.logbook_years![0]).toMatchObject({ odometer_start: 100_000, odometer_end: 130_000 });
+    expect(SHARE_WHAT_GOES).toMatch(/each trip’s date, kilometres and reason, and the logbook’s odometer readings/);
+    // (On the phone, both are there.)
+    expect((await env.sql<{ n: number }[]>`select count(*)::int as n from tax_estimates`)[0]!.n).toBe(1);
+    expect((await env.sql<{ vehicle: string }[]>`select vehicle from logbook_years`)[0]!.vehicle).toBe('Made-up bakkie CA 999-999');
+    expect(one.records).not.toHaveProperty('tax_estimates');
+    for (const never of ['12 Made-up Close', 'Made-up Depot', '7 Made-up Lane', 'guesthouse@example.co.za', '0825550100', '1 Made-up Road', '0825550199', '8001015009087', '0121212120', 'Made-up Bank 000000', 'CA 999-999', '7777700', '3333300', '1212100', '65to74', 'salary elsewhere'])
       expect(text, never).not.toContain(never);
     expect(SHARE_WHAT_GOES).toMatch(
-      /Left out: photos of your slips; your employees’ ID, tax and bank numbers; your customers’, workers’ and jobs’ contact details, addresses and notes; your business’s own address, phone, email and bank details; and where your trips went\./,
+      /Left out: photos of your slips; your employees’ ID, tax and bank numbers; your customers’, workers’ and jobs’ contact details, addresses and notes; the address, phone, email and bank details in your settings and on your trading names; where your trips went from and to, and your vehicle’s name; and the tax estimates you’ve saved \(with any income from elsewhere\)\./,
     );
+    expect(SHARE_WHAT_GOES).toMatch(/Nothing goes until you choose where to send or save it/);
   });
 
   it('carries the refund as it is, and the next share after it', async () => {

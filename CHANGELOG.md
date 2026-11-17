@@ -11,8 +11,9 @@ What changed in each version of Shap Pocket, newest first.
   accounts, and your business's details, its tax numbers and what you've filled in for its
   financial statements included. Photos of your slips, your employees' ID, tax and bank numbers,
   your customers', workers' and jobs' contact details, your business's own contact and bank details,
-  and where your trips went stay on your phone. The panel says exactly what goes. Nothing goes until
-  you choose where on the share sheet, and then only there: OpenWorks never gets it. Each share is
+  where your trips went, your vehicle's name and the tax estimates you've saved stay in Shap Pocket.
+  The panel says exactly what goes. Nothing goes until you choose where to send or save it, and
+  then only there: OpenWorks never gets it. Each share is
   numbered and says what's new, changed or gone since the last one you shared.
 - **Who approves your statements is named by you.** The statements aren't compiled until someone is
   named to approve them (in the statements' details); the phone's "Owner" placeholder never is.

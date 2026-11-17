@@ -135,4 +135,8 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   holds a file to are checked here before one is offered (`shareProblem`, shared); the share sheet
   says "as at". In Shap, a second share from books with a counter sale, a refund or stock records
   was refused: fixed there. Tests: `share-file.test.ts` (the words held to a file; it also makes
-  Shap's fixtures, both shares of one set of books, with a counter sale part refunded).
+  Shap's fixtures, both shares of one set of books, with a counter sale part refunded). Checked
+  again by another agent: the saved tax estimates (a sole proprietor's income from elsewhere,
+  retirement contributions and age) and the logbook's vehicle went too, unsaid: both stay on the
+  phone now; the words say which address stays, that a trip's reason goes, and send or save (the
+  web app on a computer downloads it). The share-file test makes both and finds neither.
