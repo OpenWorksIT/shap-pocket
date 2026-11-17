@@ -224,6 +224,52 @@ export async function buildStatements(db: Db, fyEnd: string, detailsOverride?: S
     e.bySource.set(r.source, v);
     byAcc.set(r.accountId, e);
   }
+  // A journal that moves a fixed asset against income and expenses only (depreciation, amortisation
+  // or an impairment, posted by hand) moves no cash: in the cash
+  // flows it's with the register's depreciation (IFRS for SMEs 7.8), not an asset bought or sold.
+  {
+    const fixedIds = accounts.filter((a) => ['ppe', 'intangibles'].includes(STATEMENT_LINES[a.statementLine].cash)).map((a) => a.id);
+    const plIds = new Set(accounts.filter((a) => ['income', 'cost_of_sales', 'expense'].includes(a.type)).map((a) => a.id));
+    const fixed = new Set(fixedIds);
+    type JL = { journalId: string; accountId: string; date: string; cents: string };
+    const jl: JL[] = fixedIds.length
+      ? await db<JL[]>`
+          select j.id as journal_id, jl.account_id, j.date::text as date, (jl.debit_cents - jl.credit_cents)::bigint as cents
+          from journals j join journal_lines jl on jl.journal_id = j.id
+          where j.date between ${priorStart}::date and ${fyEnd}::date
+            and exists (select 1 from journal_lines x where x.journal_id = j.id and x.account_id = any(${fixedIds}::uuid[]))`
+      : [];
+    const byJournal = new Map<string, JL[]>();
+    for (const r of jl) byJournal.set(r.journalId, [...(byJournal.get(r.journalId) ?? []), r]);
+    // The accumulated depreciation (or amortisation, or impairment) on a fixed asset: credited only
+    // by writing the asset down, never by cash.
+    const written = new Set(accounts.filter((a) => fixed.has(a.id) && (a.systemKey === 'accumulated_depreciation' || /depreciation|amorti[sz]|impairment/i.test(a.name))).map((a) => a.id));
+    for (const lines of byJournal.values()) {
+      if (!lines.some((l) => plIds.has(l.accountId))) continue;
+      // Fixed assets against income and expenses only: all of it. A journal that moves other accounts
+      // too (an opening balance, a correction): what it credits to the accumulated depreciation, up
+      // to the expenses it debits.
+      const only = lines.every((l) => fixed.has(l.accountId) || plIds.has(l.accountId));
+      let room = only ? Infinity : sum(lines.filter((l) => plIds.has(l.accountId) && Number(l.cents) > 0).map((l) => Number(l.cents)));
+      const moved = only ? lines.filter((x) => fixed.has(x.accountId)) : lines.filter((x) => written.has(x.accountId) && Number(x.cents) < 0);
+      for (const whole of moved) {
+        const cents = only ? Number(whole.cents) : -Math.min(-Number(whole.cents), room);
+        if (!only) room -= -cents;
+        if (!cents) continue;
+        const l = { ...whole, cents: String(cents) };
+        const e = byAcc.get(l.accountId);
+        if (!e) continue;
+        const cols: Col[] = ['atEnd', ...(l.date <= priorEnd ? (['atPrior', 'mvPrior'] as Col[]) : (['mvCur'] as Col[]))];
+        const from = e.bySource.get('journal');
+        const to = e.bySource.get('depreciation') ?? { atBefore: 0, atPrior: 0, atEnd: 0, mvPrior: 0, mvCur: 0 };
+        for (const c of cols) {
+          if (from) from[c] -= Number(l.cents);
+          to[c] += Number(l.cents);
+        }
+        e.bySource.set('depreciation', to);
+      }
+    }
+  }
   const val = (a: Acc, c: Col) => byAcc.get(a.id)?.[c] ?? 0;
   const books = sha256Hex(
     JSON.stringify([bt, accounts.filter((a) => (['atBefore', 'atPrior', 'atEnd', 'mvPrior', 'mvCur'] as Col[]).some((c) => val(a, c) !== 0)).map((a) => [a.code, a.type, a.statementLine, val(a, 'atBefore'), val(a, 'atPrior'), val(a, 'atEnd'), val(a, 'mvPrior'), val(a, 'mvCur')])]),
@@ -751,6 +797,15 @@ export async function buildStatements(db: Db, fyEnd: string, detailsOverride?: S
   checks.push({ label: 'The statement of changes in equity ends at the equity shown', ok: soceClose.total === equity.current, detail: `${money(soceClose.total)} and ${money(equity.current)}` });
   const suspense = accounts.filter((a) => a.systemKey === 'suspense').reduce((t, a) => t + val(a, 'atEnd'), 0);
   checks.push({ label: 'Nothing is left in suspense', ok: suspense === 0, detail: suspense ? `${money(suspense)} in suspense: sort it out before the statements are signed` : 'none' });
+  // Who approves and signs them (Companies Act s30(3)(c) for a company): named, so the statements
+  // never go out with nobody on the signature lines (Shap 1.27's IFRS review, the shared code).
+  const approvers = details.directors.filter((d) => d.name.trim()).length;
+  const gov = governingFor(bt);
+  checks.push({
+    label: gov.plural ? `The ${gov.many} who approve the statements are named` : `The ${gov.one} who approves the statements is named`,
+    ok: approvers > 0,
+    detail: approvers ? `${approvers} named` : `none named: name the ${gov.many} in the details on this screen`,
+  });
 
   // ---------------------------------------------------------------- for the accountant to look at
   // What the standard asks that Shap can't settle from the books alone: shown with the checks, never
