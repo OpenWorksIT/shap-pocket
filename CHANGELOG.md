@@ -9,7 +9,7 @@ What changed in each version of Shap Pocket, newest first.
   the screens call it the compilation report. It said "Independent compiler's report", whatever the
   compiler's independence.
 - For a sole proprietor, a partnership or a trust, the report says the statements are prepared for
-  the owner (or the partners, or the trust's beneficiaries) and SARS, and may not be suitable for
+  the owner (or the partners, or the trust's trustees and beneficiaries) and SARS, and may not be suitable for
   other purposes; note 1 says "the owner" for a sole proprietor. Addressed to a company's
   shareholders or a co-op's members, it says the directors provided the information and are
   responsible for it, and its last sentence names the framework (the standard and the business's

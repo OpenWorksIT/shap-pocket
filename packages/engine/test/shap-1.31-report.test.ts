@@ -58,6 +58,12 @@ describe('the practitioner’s compilation report, as Shap 1.31 has it', () => {
     expect(all).toMatch(/recognition and measurement principles of .{0,80}for the owner and the South African Revenue Service/);
   });
 
+  it('a trust’s: for its trustees, its beneficiaries and SARS (Shap 1.31’s check of the fixes)', async () => {
+    const { report, all } = await reportOf('trust');
+    expect(report).toMatch(/for the trustees, the beneficiaries and the South African Revenue Service\. Accordingly, these financial statements may not be suitable for other purposes/);
+    expect(all).toMatch(/recognition and measurement principles of .{0,80}for the trustees, the beneficiaries and the South African Revenue Service/);
+  });
+
   it('a partnership’s too', async () => {
     expect((await reportOf('partnership')).report).toMatch(/for the partners and the South African Revenue Service\. Accordingly, these financial statements may not be suitable for other purposes/);
   });

@@ -158,4 +158,5 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   the screens still said "compiler's report". Fixed as in Shap (`statements/pdf.ts`,
   `statements/details.ts`: `reportAddressee`, `addresseeIsntManagement`, `specialPurposeFor`, the
   last also note 1's "the owner" for a sole proprietor). Test: `shap-1.31-report.test.ts`, each
-  failing on 1.11.1.
+  failing on 1.11.1. Shap's check of the fixes: a trust's statements are for its trustees, its
+  beneficiaries and SARS (note 1 and the report); its test fails on `bf45da7`.
