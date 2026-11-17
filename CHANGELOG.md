@@ -4,13 +4,16 @@ What changed in each version of Shap Pocket, newest first.
 
 ## 1.11.0 (17 November 2026)
 
-- **Share your books with your accountant** (Accounts → Export). One file of your books for your
-  accountant's Shap: your invoices, costs, assets, pay runs, journals and the rest, with their
-  dates, references and descriptions (which can name your customers, suppliers, workers, employees
-  and shareholders and what you paid them), your accounts and your business's details. Photos of
-  your slips, people's ID, tax and bank numbers, and contact details stay on your phone. Nothing
-  goes until you choose where on the share sheet, and then only there: OpenWorks never gets it.
-  Each share is numbered and says what's new, changed or gone since the last one you shared.
+- **Share your books with your accountant** (Accounts → Export). One file of the whole of your
+  books for your accountant's Shap: every invoice, cost, asset, pay run, journal, logbook trip and
+  the rest, whatever its date, with its references, descriptions and notes (which can name your
+  customers, suppliers, workers, employees, partners and shareholders and what you paid them), your
+  accounts, and your business's details, its tax numbers and what you've filled in for its
+  financial statements included. Photos of your slips, your employees' ID, tax and bank numbers,
+  your customers', workers' and jobs' contact details, your business's own contact and bank details,
+  and where your trips went stay on your phone. The panel says exactly what goes. Nothing goes until
+  you choose where on the share sheet, and then only there: OpenWorks never gets it. Each share is
+  numbered and says what's new, changed or gone since the last one you shared.
 - **Who approves your statements is named by you.** The statements aren't compiled until someone is
   named to approve them (in the statements' details); the phone's "Owner" placeholder never is.
 - From Shap's reviews, in the accounting code Pocket shares with it:

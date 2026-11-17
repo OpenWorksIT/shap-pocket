@@ -115,7 +115,7 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   apps: Shap's section 7, "The five reviews of 1.29 and Shap Pocket 1.11"): the share carried only
   postings, so the accountant's Shap worked the VAT201s, payroll, tax and statements out from less
   than Pocket has: it carries the books' records now (`SHARE_TABLES` in the shared
-  pocket-share.ts, people's ID, tax and bank numbers, contact details, photos and the phone's
+  pocket-share.ts, employees' ID, tax and bank numbers, contact details, photos and the phone's
   user left out), with every entry's hashes and these books' own id (migration 044), checked
   against Shap's schema before it's offered. Pocket's own: the last share's marks were read back
   with their keys renamed by the database layer, so credit notes, write-offs and the like counted
@@ -126,4 +126,13 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   is never named to approve the statements; and from the shared statements code, a cost put right
   as an asset by journal is an asset bought, and books that begin with a move-in's opening
   balances say so. Tests: `share.test.ts`, `shared-statements-1.28.test.ts`,
-  `shared-fixes-1.28.test.ts`.
+  `shared-fixes-1.28.test.ts`. The fixes, checked by a separate agent (Shap's section 7, "The
+  fixes, checked"): the panel said a share held only what was dated to the day and left out every
+  tax number and address, where its records go whatever their dates and carry the business's tax
+  numbers and its statements' details: each share is now the whole of the books, every entry
+  hashed whatever its date (`shareEntries`), the words say what goes and what doesn't, and the
+  brand's address and the trips' places stay on the phone (`SHARE_TABLES`); the read limits Shap
+  holds a file to are checked here before one is offered (`shareProblem`, shared); the share sheet
+  says "as at". In Shap, a second share from books with a counter sale, a refund or stock records
+  was refused: fixed there. Tests: `share-file.test.ts` (the words held to a file; it also makes
+  Shap's fixtures, both shares of one set of books, with a counter sale part refunded).

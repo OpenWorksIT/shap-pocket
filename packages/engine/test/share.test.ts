@@ -87,9 +87,9 @@ describe('sharing the books with the accountant', () => {
     expect(f.records.journals!.every((j) => j.created_by === null)).toBe(true);
     // What does go, and the panel says so: the workers paid, by name.
     expect(text).toContain('Made-up Thabo');
-    expect(SHARE_WHAT_GOES).toMatch(/customers, suppliers, workers, employees and shareholders and what you paid them/);
-    expect(SHARE_WHAT_GOES).toMatch(/dated up to today \(later ones go in a later share\)/);
-    expect(SHARE_WHAT_GOES).toMatch(/Left out: photos of your slips, people’s ID, tax and bank numbers, and contact details/);
+    // (What goes, said in full, is held to a file in share-file.test.ts.)
+    expect(SHARE_WHAT_GOES).toMatch(/customers, suppliers, workers, employees, partners and shareholders and what you paid them/);
+    expect(SHARE_WHAT_GOES).toMatch(/Left out: photos of your slips; your employees’ ID, tax and bank numbers; your customers’, workers’ and jobs’ contact details/);
   });
 
   it('says nothing changed when nothing did: credit notes and lines in any order (accounting 2 and 3)', async () => {
@@ -115,8 +115,8 @@ describe('sharing the books with the accountant', () => {
   });
 
   it('the share sheet’s message says each share is the whole of the books (words 6)', () => {
-    expect(pocketShareMessage({ number: 3, through: '2026-11-17', previous: 2, changes: 2 }, formatDate)).toBe(`Share 3: the whole of the books to ${formatDate('2026-11-17')}, 2 changes since share 2.`);
-    expect(pocketShareMessage({ number: 1, through: '2026-11-17', previous: null, changes: 0 }, formatDate)).toBe(`Share 1: the whole of the books to ${formatDate('2026-11-17')}.`);
+    expect(pocketShareMessage({ number: 3, through: '2026-11-17', previous: 2, changes: 2 }, formatDate)).toBe(`Share 3: the whole of the books as at ${formatDate('2026-11-17')}, with 2 changes since share 2.`);
+    expect(pocketShareMessage({ number: 1, through: '2026-11-17', previous: null, changes: 0 }, formatDate)).toBe(`Share 1: the whole of the books as at ${formatDate('2026-11-17')}.`);
   });
 
   it('says where to look, and that it’s a fault, when the books don’t balance (words 9)', () => {

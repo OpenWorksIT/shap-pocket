@@ -1128,7 +1128,7 @@ function ShareBooks() {
       const made = await api<{ number: number; through: string; entries: number; changes: { added: number; changed: number; removed: number }; previous: { number: number } | null }>('/api/share', { body: {} });
       const { blob, filename } = await apiBlob(`/api/share/${made.number}/file`);
       const changes = made.changes.added + made.changes.changed + made.changes.removed;
-      const how = await shareFile(blob, filename, `Books to ${formatDate(made.through)}`, pocketShareMessage({ number: made.number, through: made.through, previous: made.previous?.number ?? null, changes }, formatDate));
+      const how = await shareFile(blob, filename, `Books as at ${formatDate(made.through)}`, pocketShareMessage({ number: made.number, through: made.through, previous: made.previous?.number ?? null, changes }, formatDate));
       if (how === 'cancelled') return;
       await api(`/api/share/${made.number}/sent`, { body: {} });
       toast(how === 'downloaded' ? 'Saved: send it to your accountant' : 'Shared');

@@ -4,18 +4,20 @@
  * the practice's copy of these books, to compile their statements). Each share is stamped (its
  * number, when it was made, and these books' own id) and says what changed since the last one sent.
  *
- * What's in it (packages/shared pocket-share.ts, SHARE_TABLES): the books' own records (invoices,
- * costs, assets, pay runs, journals and the rest, which name the business's customers, suppliers,
- * workers, employees and shareholders and what they were paid), the chart of accounts and the
- * business's details. Left out: who signs in, photos of slips, people's ID, tax and bank numbers,
- * and contact details. It goes only where the owner sends it, from the phone's share sheet: nothing
- * is sent from here.
+ * What's in it (packages/shared pocket-share.ts, SHARE_TABLES and SHARE_WHAT_GOES, which the panel
+ * shows and test/share.test.ts holds to a file): the whole of the books' own records, whatever their
+ * dates (invoices, costs, assets, pay runs, journals, trips and the rest, which name the business's
+ * customers, suppliers, workers, employees, partners and shareholders and what they were paid), the
+ * chart of accounts and the business's details, its tax numbers and statement details included.
+ * Left out: who signs in, photos of slips, employees' ID, tax and bank numbers, the contact details
+ * of customers, workers and jobs, the business's own contact and bank details, and where trips went.
+ * It goes only where the owner sends it, from the phone's share sheet: nothing is sent from here.
  *
  * Making one keeps it pending; it counts as shared once the share sheet says where it went (POST
  * …/sent), so one that was cancelled doesn't move the "changed since" mark.
  */
 import type { App as FastifyInstance } from '../http.js';
-import { entryHash, figuresHash, POCKET_SHARE_FORMAT, pocketShareSchema, SHARE_TABLES, SHARE_USER_COLUMNS, shareDiff, shareEntries, type PocketShare } from '@shap/shared';
+import { entryHash, figuresHash, POCKET_SHARE_FORMAT, pocketShareSchema, SHARE_TABLES, SHARE_USER_COLUMNS, shareDiff, shareEntries, shareProblem, type PocketShare } from '@shap/shared';
 import { z } from 'zod';
 import { requireRole, userOrThrow } from '../auth.js';
 import type { Ctx } from '../context.js';
@@ -37,10 +39,10 @@ export const BOOKS_DONT_BALANCE = 'Your books don’t balance, so they can’t b
 
 const query = (db: Db) => db as unknown as Parameters<typeof shareEntries>[0];
 
-/** Each entry in the books to `through`: key → its hash (what "changed since" compares). */
-export async function shareMarks(db: Db, through: string) {
+/** Each entry in the books, whatever its date: key → its hash (what "changed since" compares). */
+export async function shareMarks(db: Db) {
   await freshTotals(db);
-  const entries = await shareEntries(query(db), through);
+  const entries = await shareEntries(query(db));
   return { entries, marks: Object.fromEntries(entries.map((e) => [e.key, entryHash(e)])) as Record<string, string> };
 }
 
@@ -71,7 +73,7 @@ async function lastSent(db: Db) {
 /** Builds the next share (pending until it's sent), checked against the format Shap reads. */
 export async function makeShare(db: Db, userId: string | null): Promise<ShareFile> {
   const through = today();
-  const { entries, marks } = await shareMarks(db, through);
+  const { entries, marks } = await shareMarks(db);
   const off = entries.reduce((sum, t) => sum + t.lines.reduce((x, l) => x + l.cents, 0), 0);
   if (off !== 0) throw badRequest(BOOKS_DONT_BALANCE);
   const last = await lastSent(db);
@@ -87,9 +89,9 @@ export async function makeShare(db: Db, userId: string | null): Promise<ShareFil
     entries: entries.map((e) => ({ key: e.key, hash: marks[e.key]!, figures: figuresHash(e) })),
     changes: { added: diff.added.length, changed: diff.changed.length, removed: diff.removed.length },
   };
-  // What Shap reads: the same schema. A file it would refuse is never offered.
+  // What Shap reads: the same schema and limits. A file it would refuse is never offered.
   const checked = pocketShareSchema.safeParse(file);
-  if (!checked.success) throw new HttpError(500, 'Shap Pocket couldn’t make a share your accountant’s Shap can read. That shouldn’t happen: please let us know: tap Feedback, then Bug found.', 'internal');
+  if (!checked.success || shareProblem(checked.data)) throw new HttpError(500, 'Shap Pocket couldn’t make a share your accountant’s Shap can read. That shouldn’t happen: please let us know: tap Feedback, then Bug found.', 'internal');
   // One pending at a time: an older one that never went is dropped.
   await db`delete from shares where sent_at is null`;
   await db`insert into shares (number, made_at, through, marks, made_by, file) values (${number}, ${madeAt}, ${through}::date, ${JSON.stringify(marks)}, ${userId}, ${JSON.stringify(file)})`;
@@ -105,7 +107,7 @@ export function registerShareRoutes(app: FastifyInstance, ctx: Ctx): void {
     const [sent] = await sql<{ sentAt: Date }[]>`select sent_at from shares where sent_at is not null order by number desc limit 1`;
     const last = await lastSent(sql);
     if (!last) return { last: null, changedSince: null };
-    const { marks } = await shareMarks(sql, today());
+    const { marks } = await shareMarks(sql);
     const d = shareDiff(last.marks, marks);
     return { last: { number: last.number, madeAt: last.madeAt, sentAt: sent!.sentAt }, changedSince: d.added.length + d.changed.length + d.removed.length };
   });
