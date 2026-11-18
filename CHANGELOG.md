@@ -2,6 +2,20 @@
 
 What changed in each version of Shap Pocket, newest first.
 
+## 1.11.3 (18 November 2026)
+
+- From Shap's reviews of 1.32, in the code Pocket shares with it:
+  - The financial statements' checks list time tracked up to the year end that wasn't on an invoice
+    issued by then (with its value at your hourly rates), for your accountant to consider accruing
+    the revenue; and the revenue policy no longer says all your work is invoiced as it's done when
+    it isn't.
+  - The VAT option *Exempt or not a supply* says it's also for a fee you paid in your client's name
+    as their agent and recover at cost (a courier you booked yourself and charge on is your own
+    supply, with VAT).
+  - Turnover tax: setup, Settings and the points before the terms say that a business with more than
+    20% of its receipts from professional services (consulting, IT, health, education and the others
+    SARS lists) can't be on it.
+
 ## 1.11.2 (17 November 2026)
 
 - The compiler's report on your financial statements is titled **Practitioner's compilation

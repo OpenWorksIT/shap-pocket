@@ -4,7 +4,7 @@
  */
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BUSINESS_TYPES, ENTITIES, entity, extrasFor, featuresFor, INDUSTRIES, paysOutProfit, payoutWord, payeRefProblem, regNumberProblem, sdlRefFor, setupCautions, TERMS_VERSION, TURNOVER_TAX_LIMIT_CENTS, formatZar, uifRefProblem, vatNumberProblem, vatThresholds, WORKFLOWS, type EmployerAnswer, type IndustryKey, type SetupExtras, type Workflow, PAYMENT_DAYS, dayLabel, withPaymentTerm } from '@shap/shared';
+import { BUSINESS_TYPES, ENTITIES, entity, extrasFor, featuresFor, INDUSTRIES, PROFESSIONAL_SERVICE_INDUSTRIES, TURNOVER_TAX_PROFESSIONAL, paysOutProfit, payoutWord, payeRefProblem, regNumberProblem, sdlRefFor, setupCautions, TERMS_VERSION, TURNOVER_TAX_LIMIT_CENTS, formatZar, uifRefProblem, vatNumberProblem, vatThresholds, WORKFLOWS, type EmployerAnswer, type IndustryKey, type SetupExtras, type Workflow, PAYMENT_DAYS, dayLabel, withPaymentTerm } from '@shap/shared';
 import { TermsReview } from '../components/Terms';
 import { LogoField } from '../components/BusinessForm';
 import { Logo } from '../components/Logo';
@@ -262,6 +262,7 @@ export default function WelcomePage({ canRestore = true }: { canRestore?: boolea
                 </div>
               </span>
             </label>
+            {PROFESSIONAL_SERVICE_INDUSTRIES.includes(industry) && f.turnoverTax && <p className="xs banner">{TURNOVER_TAX_PROFESSIONAL}</p>}
             {nav(Boolean(industry) && consent !== null)}
           </Q>
         )}

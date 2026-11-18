@@ -29,6 +29,15 @@ export const INDUSTRIES = [
   { key: 'other', label: 'Something else', workflow: 'quote_invoice' },
 ] as const satisfies readonly { key: string; label: string; workflow: Workflow }[];
 
+/**
+ * The Sixth Schedule's professional services (para 1), as Shap's kinds of business have them: a
+ * business with more than 20% of its receipts from them isn't a micro business (para 3(b)), so it
+ * can't be on turnover tax. (Shap's own list adds an accounting practice.)
+ */
+export const PROFESSIONAL_SERVICE_INDUSTRIES: readonly string[] = ['accounting', 'consulting', 'it', 'health', 'tutor'];
+export const TURNOVER_TAX_PROFESSIONAL =
+  'A business with more than 20% of its receipts from professional services (accounting, consulting, information technology, health, education, law, engineering and the others the Sixth Schedule lists) can’t be on turnover tax: it isn’t a micro business. Check with your accountant or SARS.';
+
 export type IndustryKey = (typeof INDUSTRIES)[number]['key'];
 
 export const WORKFLOWS: { key: Workflow; label: string; hint: string }[] = [

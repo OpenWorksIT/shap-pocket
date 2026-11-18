@@ -11,7 +11,7 @@ import type { Brand, Settings } from '../lib/types';
 import { BusinessFields, LogoField } from '../components/BusinessForm';
 import { Partners } from '../components/Partners';
 import { ApiImage } from '../components/Files';
-import { FEATURES, FEATURE_GROUPS, FEATURE_KEYS, featureOn, INDUSTRIES, TERMS_URL, todayIso, TURNOVER_TAX_LIMIT_CENTS, vatRateOn } from '@shap/shared';
+import { FEATURES, FEATURE_GROUPS, FEATURE_KEYS, featureOn, INDUSTRIES, PROFESSIONAL_SERVICE_INDUSTRIES, TERMS_URL, todayIso, TURNOVER_TAX_LIMIT_CENTS, TURNOVER_TAX_PROFESSIONAL, vatRateOn } from '@shap/shared';
 import { WipeData } from '../components/WipeData';
 import { device, isNative } from '../lib/native';
 import { reportUsage } from '../lib/usage';
@@ -533,6 +533,7 @@ function SettingsForm({ section }: { section: 'company' | 'invoicing' }) {
                   {kind.taxedAs === 'company' && ' For now a company on turnover tax needs its year to end in February (the 2026 Budget proposed dropping this; it isn’t law yet).'}
                   {kind.taxedAs === 'partners' && ' Each partner registers and pays on their own share of the turnover.'}
                 </div>
+                {f.turnoverTax && PROFESSIONAL_SERVICE_INDUSTRIES.includes(settings.industry) && <div className="xs banner">{TURNOVER_TAX_PROFESSIONAL}</div>}
               </span>
             </label>}
             <div className="form-grid">

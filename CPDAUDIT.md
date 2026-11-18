@@ -160,3 +160,9 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   last also note 1's "the owner" for a sole proprietor). Test: `shap-1.31-report.test.ts`, each
   failing on 1.11.1. Shap's check of the fixes: a trust's statements are for its trustees, its
   beneficiaries and SARS (note 1 and the report); its test fails on `bf45da7`.
+- **1.11.3** (with Shap 1.32): from Shap 1.32's IFRS and SARS reviews, in the shared code: time not
+  invoiced by the year end listed for the accountant (IFRS for SMEs 23.14) and the revenue policy
+  worded to fit; the agent's amount as no supply in the exempt option's hint (VAT Act s54(2)); the
+  professional-services rule for turnover tax (Sixth Schedule para 3(b)) in setup, Settings and the
+  cautions. Shap Accountant's setup is Shap's own (Pocket has no practice). Test: `shap-1.32.test.ts`,
+  failing on 1.11.2.
