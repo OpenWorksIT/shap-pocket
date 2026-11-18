@@ -167,4 +167,7 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   cautions. Shap Accountant's setup is Shap's own (Pocket has no practice). The check of the fixes:
   time invoiced through a quote counts as invoiced, and only the year's time (and earlier time
   invoiced after the year end) is listed; the turnover tax rule names a company's investment income.
-  Test: `shap-1.32.test.ts`, failing on 1.11.2.
+  The third round: the unbilled-time query finds each entry's invoice by a join, not a search of
+  every invoice for each (Shap's speed test covers the shared query); the exempt hint says an agent's
+  amount is neither supply nor revenue and stays off the invoice. Test: `shap-1.32.test.ts`, failing
+  on 1.11.2.

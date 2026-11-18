@@ -76,7 +76,7 @@ describe('as Shap 1.32 has it', () => {
   });
 
   it('says an amount paid as the client’s agent is no supply, and turnover tax isn’t for professional services', () => {
-    expect(SALE_VAT.exempt.hint).toMatch(/a fee you paid in your client’s name as their agent and recover at cost/);
+    expect(SALE_VAT.exempt.hint).toMatch(/A fee you pay in a client’s name as their agent and recover at cost is neither your supply nor your revenue, so it doesn’t go on your invoice/);
     expect(TURNOVER_TAX_PROFESSIONAL).toMatch(/more than 20% of its receipts from professional services/);
     expect(TURNOVER_TAX_PROFESSIONAL).toMatch(/for a company, its investment income counts too/);
     expect(setupCautions({ vatRegistered: false, employees: false, turnoverTax: true }).join(' ')).toContain(TURNOVER_TAX_PROFESSIONAL);
