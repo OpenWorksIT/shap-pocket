@@ -172,4 +172,4 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   amount is neither supply nor revenue and stays off the invoice. The fourth round (words): the hint
   says "generally", gives Shap's own limit (every invoice line counts as revenue) as why it stays
   off a Shap invoice, and says to check with an accountant; the changelog says the same. Test:
-  `shap-1.32.test.ts`, failing on 1.11.2.
+  `shap-1.32.test.ts`, failing on 1.11.2. All five ready, with Shap 1.32's (Shap's `80dd287`).
