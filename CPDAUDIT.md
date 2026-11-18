@@ -169,5 +169,7 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   invoiced after the year end) is listed; the turnover tax rule names a company's investment income.
   The third round: the unbilled-time query finds each entry's invoice by a join, not a search of
   every invoice for each (Shap's speed test covers the shared query); the exempt hint says an agent's
-  amount is neither supply nor revenue and stays off the invoice. Test: `shap-1.32.test.ts`, failing
-  on 1.11.2.
+  amount is neither supply nor revenue and stays off the invoice. The fourth round (words): the hint
+  says "generally", gives Shap's own limit (every invoice line counts as revenue) as why it stays
+  off a Shap invoice, and says to check with an accountant; the changelog says the same. Test:
+  `shap-1.32.test.ts`, failing on 1.11.2.

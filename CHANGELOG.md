@@ -9,9 +9,10 @@ What changed in each version of Shap Pocket, newest first.
     after the year end) that wasn't on an invoice issued by the year end, directly or through a quote
     (with its value at your hourly rates), for your accountant to consider accruing the revenue; and
     the revenue policy no longer says all your work is invoiced as it's done when it isn't.
-  - The VAT option *Exempt or not a supply* says it's also for a fee you paid in your client's name
-    as their agent and recover at cost (a courier you booked yourself and charge on is your own
-    supply, with VAT).
+  - The VAT option *Exempt or not a supply* says a fee you pay in a client's name as their agent and
+    recover at cost is generally neither your supply nor your revenue, so it stays off your Shap
+    invoices (check with your accountant). A courier you book yourself and charge on is your own
+    supply, with VAT.
   - Turnover tax: setup, Settings and the points before the terms say that a business with more than
     20% of its receipts from professional services (consulting, IT, health, education and the others
     SARS lists; for a company, with its investment income) can't be on it.
