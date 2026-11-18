@@ -164,5 +164,7 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   invoiced by the year end listed for the accountant (IFRS for SMEs 23.14) and the revenue policy
   worded to fit; the agent's amount as no supply in the exempt option's hint (VAT Act s54(2)); the
   professional-services rule for turnover tax (Sixth Schedule para 3(b)) in setup, Settings and the
-  cautions. Shap Accountant's setup is Shap's own (Pocket has no practice). Test: `shap-1.32.test.ts`,
-  failing on 1.11.2.
+  cautions. Shap Accountant's setup is Shap's own (Pocket has no practice). The check of the fixes:
+  time invoiced through a quote counts as invoiced, and only the year's time (and earlier time
+  invoiced after the year end) is listed; the turnover tax rule names a company's investment income.
+  Test: `shap-1.32.test.ts`, failing on 1.11.2.

@@ -48,7 +48,7 @@ describe('as Shap 1.32 has it', () => {
     const s = await yearWith(3);
     const item = s.checks.find((c) => /not invoiced by the year end/.test(c.label));
     expect(item).toMatchObject({ ok: false, level: 'look' });
-    expect(item!.detail).toMatch(/^3 hours of time tracked up to the year end weren’t on an invoice issued by then \(R\s?1[\s,]?500\.00 at the hourly rates in Shap\)\. If that work was for clients and will be billed, consider accruing the revenue/);
+    expect(item!.detail).toMatch(/^3 hours of time tracked in the year \(or before it and invoiced only after the year end\) weren’t on an invoice issued by the year end \(R\s?1[\s,]?500\.00 at the hourly rates in Shap\)\. If that work was for clients and will be billed, consider accruing the revenue/);
     expect(policyText(s)).toMatch(/Revenue from services is recognised as the work is performed\./);
     expect(policyText(s)).not.toMatch(/invoices its work as it is done/);
   });
@@ -59,9 +59,26 @@ describe('as Shap 1.32 has it', () => {
     expect(policyText(s)).toMatch(/which is when it is invoiced: the business invoices its work as it is done/);
   });
 
+  it('counts time on a quote an invoice was made from as invoiced, and leaves out earlier years’ time never invoiced (the check of the fixes)', async () => {
+    await yearWith(0);
+    const me = await login(env.app);
+    const q = await me.post('/api/time', { projectId: null, startedAt: '2025-09-01T08:00:00+02:00', endedAt: '2025-09-01T12:00:00+02:00', note: 'Made-up quoted work' });
+    const quote = await me.post('/api/documents', { kind: 'quote', issueDate: '2025-09-02', lines: [] });
+    await me.post('/api/time/bill', { documentId: quote.id, ids: [q.id] });
+    const inv = await me.post(`/api/documents/${quote.id}/convert`, {});
+    // The invoice dated in the year (the draft is dated the day it's made).
+    await env.sql`update documents set issue_date = '2025-09-10' where id = ${inv.id}`;
+    await me.post(`/api/documents/${inv.id}/issue`, {});
+    await me.post('/api/time', { projectId: null, startedAt: '2023-06-02T08:00:00+02:00', endedAt: '2023-06-02T09:00:00+02:00', note: 'Made-up old admin' });
+    const s = await buildStatements(env.sql, FY);
+    expect(s.checks.find((c) => /not invoiced by the year end/.test(c.label))).toBeUndefined();
+    expect(policyText(s)).toMatch(/which is when it is invoiced: the business invoices its work as it is done/);
+  });
+
   it('says an amount paid as the client’s agent is no supply, and turnover tax isn’t for professional services', () => {
     expect(SALE_VAT.exempt.hint).toMatch(/a fee you paid in your client’s name as their agent and recover at cost/);
     expect(TURNOVER_TAX_PROFESSIONAL).toMatch(/more than 20% of its receipts from professional services/);
+    expect(TURNOVER_TAX_PROFESSIONAL).toMatch(/for a company, its investment income counts too/);
     expect(setupCautions({ vatRegistered: false, employees: false, turnoverTax: true }).join(' ')).toContain(TURNOVER_TAX_PROFESSIONAL);
   });
 });
