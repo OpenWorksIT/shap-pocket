@@ -173,3 +173,16 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   says "generally", gives Shap's own limit (every invoice line counts as revenue) as why it stays
   off a Shap invoice, and says to check with an accountant; the changelog says the same. Test:
   `shap-1.32.test.ts`, failing on 1.11.2. All five ready, with Shap 1.32's (Shap's `80dd287`).
+- **1.11.4** (with Shap 1.33; Shap's CPDAUDIT.md, "The five reviews of 1.33 and Shap Pocket
+  1.11.4"): from Shap 1.33's reviews, in the shared code: a statement's amounts written -.50 or
+  1.234,56, and a very long description; a monthly cost watched on the account last paid from;
+  what you're responsible for filing names CIPC and the Compensation Fund; Home's revenue, gross
+  profit by the income statement's lines and net profit's parts, with income tax said by who pays
+  it; the books audit's off-cash warning (IFRS for SMEs 7.2), a used payment account's (or cost
+  type's) history kept on its line, from a company file too, and the changes logged (3.12); move-in's
+  payroll tax and VAT guesses; a pay date a year off refused, and a run paid late or across 1 March
+  noted; VAT on journals typed in said on the VAT201 screen and in the audit (not SARS's payments
+  and refunds, VAT with PAYE among them), read once per journal; a journal of up to 1 000 lines, and
+  a share with a longer one said before it's offered. Pocket has no forecast, budgets or staff, so
+  those findings don't arise. Tests: `review-shap-1.33.test.ts`, `review-shap-1.33-security.test.ts`
+  and `review-shap-1.33-round6.test.ts`, each failing without its fix.
