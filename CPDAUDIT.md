@@ -184,5 +184,7 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   noted; VAT on journals typed in said on the VAT201 screen and in the audit (not SARS's payments
   and refunds, VAT with PAYE among them), read once per journal; a journal of up to 1 000 lines, and
   a share with a longer one said before it's offered. Pocket has no forecast, budgets or staff, so
-  those findings don't arise. Tests: `review-shap-1.33.test.ts`, `review-shap-1.33-security.test.ts`
-  and `review-shap-1.33-round6.test.ts`, each failing without its fix.
+  those findings don't arise. Tests: `review-shap-1.33.test.ts`, `review-shap-1.33-security.test.ts`,
+  `review-shap-1.33-round6.test.ts` and `review-shap-1.33-round7.test.ts` (a company file keeps
+  each account's line, a share's journal however its id is written, a move's amounts logged),
+  each failing without its fix.

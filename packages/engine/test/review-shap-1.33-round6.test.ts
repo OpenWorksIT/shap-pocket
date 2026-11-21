@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { addDays, addMonths, financialYear, latePayNote, noIncomeTaxWords, vatPeriod } from '@shap/shared';
+import { addDays, addMonths, financialYear, formatDate, latePayNote, noIncomeTaxWords, vatPeriod } from '@shap/shared';
 import { handVat, today } from '../src/lib/books.js';
 import { expectCleanAudit, login, ref, setup, type TestEnv } from './helpers.js';
 
@@ -197,18 +197,18 @@ describe('moving a used payment account or cost type (IFRS, accounting, words)',
     const put = (path: string, id: string, body: unknown) => owner.call({ method: 'PUT', url: `/api/${path}/${id}`, payload: body as never });
     const refused = await put('sources', bank, { name: 'Business bank', kind: 'bank', accountId: hold.id });
     expect(refused.statusCode).toBe(400);
-    expect(refused.json().error).not.toMatch(/last year’s figures/);
+    expect(refused.json().error).not.toMatch(/cash line with it, last year’s figures too/);
     // A cost type on Cash on hand, moved to Sundry: refused too.
     const [petty] = await env.sql<{ id: string }[]>`select id from accounts where code = '1050'`;
     const cat = await owner.post<{ id: string }>('/api/categories', { name: 'Made-up petty cash top-up', kind: 'overhead', accountId: petty!.id });
     await owner.post('/api/costs', { date: addDays(now, -2), description: 'Made-up top-up', supplier: '', amountCents: 20_000, categoryId: cat.id, sourceId: bank });
     const moved = await put('categories', cat.id, { name: 'Made-up petty cash top-up', kind: 'overhead', accountId: await r.acc('sundry') });
     expect(moved.statusCode).toBe(400);
-    expect(moved.json().error).toMatch(/otherwise make a new cost type for what’s coming\.$/);
+    expect(moved.json().error).toMatch(/otherwise add a new one under Cost types for what’s coming\.$/);
     // From a company file: refused the same way, and a closed year's history isn't moved.
     const file = await owner.call({ method: 'POST', url: '/api/company-file', payload: { file: { format: 'shap-company/1', sources: [{ name: 'Business bank', kind: 'bank', account: '1079' }] } } });
     expect(file.statusCode).toBe(400);
-    expect(file.json().error).toMatch(/^The company file puts the payment account “Business bank” on another account\. What’s already captured with this would move on or off/);
+    expect(file.json().error).toMatch(/^The company file puts “Business bank” \(Paid from \/ into\) on another account\. What’s already captured with this would move on or off the statements’ cash line with it\. Change the file \(give it a new name there, or leave it out\) and load it again\. Or give the new account the same line in the file, after checking with your accountant\.$/);
     const till = await owner.post<{ id: string }>('/api/sources', { name: 'Made-up till', kind: 'cash', accountId: await r.acc('bank') });
     await owner.post('/api/costs', { date: addDays(fy.start, -30), description: 'Made-up fuel last year', supplier: 'Made-up Garage', amountCents: 20_000, categoryId: await r.cat('Petrol'), sourceId: till.id });
     await env.sql`update settings set lock_date = ${addDays(fy.start, -1)}::date where id`;
@@ -226,6 +226,7 @@ describe('a share with a journal longer than Shap takes (security)', () => {
     env = await setup();
   });
   afterAll(async () => {
+    await expectCleanAudit(env.sql);
     await env.close();
   });
 
@@ -240,18 +241,18 @@ describe('a share with a journal longer than Shap takes (security)', () => {
       union all select ${j!.id}::uuid, ${await r.acc('bank')}::uuid, 1199, 0, ''`;
     const res = await owner.call({ method: 'POST', url: '/api/share' });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toBe('A journal in your books has more than 1 000 lines, more than your accountant’s Shap takes: split it into journals that each balance, then share again.');
+    expect(res.json().error).toBe(`A journal in your books (${formatDate(now)}, “Made-up long journal”) has more than 1 000 lines, more than your accountant’s Shap takes: split it into journals that each balance, then share again.`);
   });
 });
 
 describe('the sixth round’s words', () => {
   it('net profit’s words, the late pay note, the audit log and the VAT201 note', () => {
     expect(noIncomeTaxWords({ businessType: 'company' })).toBe('; before income tax (none captured in the books)');
-    expect(noIncomeTaxWords({ businessType: 'sole_prop' })).toBe('; your own income tax isn’t in the business’s books');
+    expect(noIncomeTaxWords({ businessType: 'sole_prop' })).toBe('; your income tax is your own, not the business’s');
     expect(latePayNote('2027-02', '2027-03-05')).toMatch(/^The pay date is in the next tax year \(from 1 March 2027\)\./);
     const log = web('components/AuditLog.tsx');
-    for (const key of ["account: 'Account'", "payment_source: 'Payment account'", "cost_category: 'Cost type'", "account_line_changed: 'line or type changed'", "moved_to_account: 'moved onto another account'"]) expect(log).toContain(`  ${key}`);
-    expect(log).toMatch(/bits\.push\(`from \$\{accountWords\(d\.from\)\} to \$\{accountWords\(d\.to\)\}`\)/);
+    for (const key of ["account: 'Account'", "payment_source: 'Paid from / into'", "cost_category: 'Cost type'", "account_line_changed: 'line or type changed'", "moved_to_account: 'moved onto another account'"]) expect(log).toContain(`  ${key}`);
+    expect(log).toMatch(/bits\.push\(`from \$\{accountWords\(d\.from\)\} to \$\{accountWords\(d\.to\)\}\$\{typeof d\.by === 'string' \? ` · by \$\{d\.by\}` : ''\}`\)/);
     const screen = web('components/TaxForms.tsx');
     expect(screen).not.toMatch(/Journals typed in added <Money cents=\{data\.handVatAddedCents \?\? 0\} \/> to the VAT owed and took/);
     expect(screen).toMatch(/\(data\.handVatAddedCents \?\? 0\) > 0 \? \(/);

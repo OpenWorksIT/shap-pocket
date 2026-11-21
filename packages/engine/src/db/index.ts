@@ -17,6 +17,7 @@ export function createDb(pg: PGliteInterface): Sql {
 /** Postgres error codes we handle explicitly. */
 export const PG = {
   uniqueViolation: '23505',
+  deadlock: '40P01',
   exclusionViolation: '23P01',
   foreignKeyViolation: '23503',
 } as const;

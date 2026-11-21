@@ -225,11 +225,12 @@ export const SECTION_LABELS: Record<StatementSection, string> = {
  * Interpretation Note 24), so that's what's said. (Shap 1.33.)
  */
 export function noIncomeTaxWords(s: { businessType: string; turnoverTax?: boolean; approvedPbo?: boolean }): string {
-  const { taxedAs } = entity(s.businessType);
-  const tax = s.turnoverTax ? 'tax' : 'income tax';
-  if (taxedAs === 'individual') return `; your own ${tax} isn’t in the business’s books`;
-  if (taxedAs === 'partners') return `; the partners’ own ${tax} isn’t in the business’s books`;
-  if (s.turnoverTax) return '; turnover tax is in it only as far as it’s captured in the books';
+  const kind = entity(s.businessType);
+  const turnover = Boolean(s.turnoverTax) && kind.turnoverTax;
+  const tax = turnover ? 'turnover tax' : 'income tax';
+  if (kind.taxedAs === 'individual') return `; your ${tax} is your own, not the business’s`;
+  if (kind.taxedAs === 'partners') return `; the partners’ ${tax} is their own, not the business’s`;
+  if (turnover) return '; turnover tax is in it only as far as it’s captured in the books';
   if (s.businessType === 'npc' && s.approvedPbo) return '; before any income tax on trading beyond the PBO exemption (none captured in the books)';
   return '; before income tax (none captured in the books)';
 }

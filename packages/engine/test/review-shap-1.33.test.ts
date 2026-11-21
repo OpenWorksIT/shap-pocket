@@ -101,11 +101,11 @@ describe('Home’s tiles: revenue first, and gross profit as the income statemen
     expect(home).toMatch(/income tax as captured in the books`/);
     expect(home).toMatch(/\(data\.yearToDate\.incomeTaxCents \? '' : noIncomeTaxWords\(settings\)\)/);
     // By who pays it: a sole proprietor's tax is their own, never "not yet" in the books.
-    expect(noIncomeTaxWords({ businessType: 'sole_prop' })).toBe('; your own income tax isn’t in the business’s books');
-    expect(noIncomeTaxWords({ businessType: 'partnership' })).toBe('; the partners’ own income tax isn’t in the business’s books');
+    expect(noIncomeTaxWords({ businessType: 'sole_prop' })).toBe('; your income tax is your own, not the business’s');
+    expect(noIncomeTaxWords({ businessType: 'partnership' })).toBe('; the partners’ income tax is their own, not the business’s');
     expect(noIncomeTaxWords({ businessType: 'company' })).toBe('; before income tax (none captured in the books)');
     expect(noIncomeTaxWords({ businessType: 'company', turnoverTax: true })).toBe('; turnover tax is in it only as far as it’s captured in the books');
-    expect(noIncomeTaxWords({ businessType: 'sole_prop', turnoverTax: true })).toBe('; your own tax isn’t in the business’s books');
+    expect(noIncomeTaxWords({ businessType: 'sole_prop', turnoverTax: true })).toBe('; your turnover tax is your own, not the business’s');
     expect(home).toMatch(/<p className="xs muted">\{PROFIT_NOTE\}<\/p>/);
     expect(home).toMatch(/PROFIT_NOTE = 'Worked out from what’s captured in the books, to today\. Rough guides to plan with, not advice\.'/);
   });
@@ -181,8 +181,8 @@ describe('a bank account that isn’t on the cash line', () => {
     const [logged] = await env.sql<{ n: number }[]>`select count(*)::int as n from audit_log where action = 'account_to_cash_line'`;
     expect(Number(logged!.n)).toBe(0);
     const warned = (await expectCleanAudit(env.sql)).filter((i) => i.level === 'warn').map((i) => i.text);
-    expect(warned.some((t) => /^Made-up Savings Two is a bank or cash account you pay \(or paid\) from, but not on the statements' cash line\. Whether it's cash is a judgement \(money you can draw on demand is; a deposit fixed for about three months or less when it was made, for an amount that won't change, kept to pay what's coming, usually counts too; one fixed for longer, or whose value goes up and down \(shares, unit trusts\), usually doesn't\): the cash flow statement leaves it out of cash\. Check it with your accountant before changing its line/.test(t))).toBe(true);
-    expect(warned.some((t) => /^Made-up Facility is a liability you pay \(or paid\) from as a bank or cash account, but not on the statements' cash or bank overdraft line\. A bank overdraft counts as cash only when it's repayable on demand and part of day-to-day cash management/.test(t))).toBe(true);
+    expect(warned.some((t) => /^Made-up Savings Two is a bank or cash account you pay \(or paid\) from, but not on the statements’ cash line\. Whether it’s cash is a judgement \(money you can draw on demand is; a deposit fixed \(or on notice\) for about three months or less when it was made, for a known amount with its interest and little risk of its value changing, kept to pay what’s coming, usually counts too; one fixed for longer, or whose value goes up and down \(shares, most unit trusts\), usually doesn’t\): the cash flow statement leaves it out of cash\. Check it with your accountant before changing its line/.test(t))).toBe(true);
+    expect(warned.some((t) => /^Made-up Facility is a liability you pay \(or paid\) from as a bank or cash account, but not on the statements’ cash or bank overdraft line\. A bank overdraft counts as cash only when it’s repayable on demand and part of day-to-day cash management/.test(t))).toBe(true);
     // Pocket's Home shows no cash figure: the audit doesn't say it does.
     expect(warned.join(' ')).not.toMatch(/Home/);
     await env.sql`delete from payment_sources where account_id in (${other.id}, ${od.id})`;
@@ -207,7 +207,7 @@ describe('a bank account that isn’t on the cash line', () => {
     await env.sql`insert into payment_sources (name, kind, account_id, sort, active) values ('made-up notice deposit', 'bank', ${notice!.id}, 97, false)`;
     await owner.post('/api/journals', { date: addDays(lastYearStart, -30), description: 'To notice deposit (made up)', lines: [{ accountId: notice!.id, debitCents: 800_000 }, { accountId: bankAccount, creditCents: 800_000 }] });
     const warned = (await expectCleanAudit(env.sql)).filter((i) => i.level === 'warn').map((i) => i.text).join(' ');
-    expect(warned).toMatch(/Made-up Closed Savings and Made-up Notice Deposit are bank or cash accounts you pay \(or paid\) from, but not on the statements' cash line\. Whether each is cash is a judgement/);
+    expect(warned).toMatch(/Made-up Closed Savings and Made-up Notice Deposit are bank or cash accounts you pay \(or paid\) from, but not on the statements’ cash line\. Whether each is cash is a judgement/);
     expect(warned).toMatch(/Check each with your accountant before changing their lines/);
     expect(warned).not.toMatch(/Made-up Long Gone/);
   });
@@ -284,7 +284,7 @@ describe('moving a used payment account', () => {
     const move = () => owner.call({ method: 'PUT', url: `/api/sources/${bank}`, payload: { name: 'Business bank', kind: 'bank', accountId: acc.id } });
     const refused = await move();
     expect(refused.statusCode).toBe(400);
-    expect(refused.json().error).toBe('What’s already captured with this would move on or off the statements’ cash line with it. If the account it’s on now is on the wrong line, change that account’s line instead (Settings → Lists → Chart of accounts), after checking with your accountant; if the new account has nothing in it yet, put it on the same line first; otherwise make a new payment account for what’s coming.');
+    expect(refused.json().error).toBe('What’s already captured with this would move on or off the statements’ cash line with it. If the account it’s on now is on the wrong line, change that account’s line instead (Settings → Lists → Chart of accounts: that moves everything in it, last year’s figures too), after checking with your accountant; if the new account has nothing in it yet, put it on the same line first; otherwise add a new one under Paid from / into for what’s coming.');
     await owner.post(`/api/accounts/${acc.id}`, { code: '1078', name: 'Made-up New Bank', type: 'asset', statementLine: 'cash', active: true }, 'PUT');
     expect((await move()).statusCode).toBe(200);
     const log = await env.sql<{ action: string }[]>`select action from audit_log where action in ('account_line_changed', 'moved_to_account') order by at, action`;

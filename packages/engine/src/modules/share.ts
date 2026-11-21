@@ -17,7 +17,7 @@
  * …/sent), so one that was cancelled doesn't move the "changed since" mark.
  */
 import type { App as FastifyInstance } from '../http.js';
-import { entryHash, figuresHash, POCKET_SHARE_FORMAT, pocketShareSchema, SHARE_TABLES, SHARE_USER_COLUMNS, shareDiff, shareEntries, shareProblem, type PocketShare } from '@shap/shared';
+import { entryHash, figuresHash, formatDate, MAX_JOURNAL_LINES, POCKET_SHARE_FORMAT, pocketShareSchema, SHARE_TABLES, SHARE_USER_COLUMNS, shareDiff, shareEntries, shareProblem, type PocketShare } from '@shap/shared';
 import { z } from 'zod';
 import { requireRole, userOrThrow } from '../auth.js';
 import type { Ctx } from '../context.js';
@@ -91,9 +91,13 @@ export async function makeShare(db: Db, userId: string | null): Promise<ShareFil
   };
   // What Shap reads: the same schema and limits. A file it would refuse is never offered.
   const checked = pocketShareSchema.safeParse(file);
-  if (checked.success && shareProblem(checked.data)?.kind === 'long_journal')
-    throw badRequest('A journal in your books has more than 1 000 lines, more than your accountant’s Shap takes: split it into journals that each balance, then share again.');
-  if (!checked.success || shareProblem(checked.data)) throw new HttpError(500, 'Shap Pocket couldn’t make a share your accountant’s Shap can read. That shouldn’t happen: please let us know: tap Feedback, then Bug found.', 'internal');
+  const problem = checked.success ? shareProblem(checked.data) : null;
+  if (problem?.kind === 'long_journal') {
+    const [j] = await db<{ date: string; description: string }[]>`
+      select j.date::text as date, j.description from journals j where (select count(*) from journal_lines l where l.journal_id = j.id) > ${MAX_JOURNAL_LINES} order by j.date limit 1`;
+    throw badRequest(`A journal in your books${j ? ` (${formatDate(j.date)}, “${j.description}”)` : ''} has more than 1 000 lines, more than your accountant’s Shap takes: split it into journals that each balance, then share again.`);
+  }
+  if (!checked.success || problem) throw new HttpError(500, 'Shap Pocket couldn’t make a share your accountant’s Shap can read. That shouldn’t happen: please let us know: tap Feedback, then Bug found.', 'internal');
   // One pending at a time: an older one that never went is dropped.
   await db`delete from shares where sent_at is null`;
   await db`insert into shares (number, made_at, through, marks, made_by, file) values (${number}, ${madeAt}, ${through}::date, ${JSON.stringify(marks)}, ${userId}, ${JSON.stringify(file)})`;
