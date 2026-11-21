@@ -190,4 +190,5 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   the `review-shap-1.33-round8-*` files (a closed year's entries counted as they are, a cost type's
   kind, a sole proprietor's February year end from a company file, a journal id in an array) and
   `-round9-*` (a share value that can't be written as text, a company file's change of year end
-  logged), each failing without its fix.
+  logged) and `-round10` (a cost type's kind can't move a closed period's VAT between boxes 14
+  and 15), each failing without its fix.

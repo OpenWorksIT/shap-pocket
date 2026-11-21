@@ -27,8 +27,8 @@ What changed in each version of Shap Pocket, newest first.
     Moving a used payment account (or cost type) onto another account is refused when its history would move on
     or off the cash line with it, or would move anything in a closed period, from a company file too
     (where an account the file gives no line keeps its own; a line that doesn't fit, or turnover
-    tax without a February year end, is refused as Settings refuses them, and a change of type is
-    refused too (make it in Settings); and a sole proprietor's year ends in February), and a change of an account's line, or
+    tax without a February year end, is refused as Settings refuses them, and so is a change of type,
+    which is made in Settings; and a sole proprietor's year ends in February), and a change of an account's line, or
     of the account behind a payment account or cost type, is in the audit log, with both accounts'
     names and lines and the amounts that moved, by financial year.
   - Moving in: a trial balance's PAYE, UIF and SDL owed are suggested on their own SARS accounts, not
