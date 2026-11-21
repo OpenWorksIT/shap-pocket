@@ -299,7 +299,7 @@ export function registerSettingsRoutes(app: FastifyInstance, ctx: Ctx): void {
         }
       } catch (err) {
         if (pgCode(err) === PG.uniqueViolation) throw conflict('That name is already used');
-        if (pgCode(err) === PG.deadlock) throw conflict('Someone was saving something against this at the same moment: try again.');
+        if (pgCode(err) === PG.deadlock) throw conflict('Something else was being saved against this at the same moment: try again.');
         throw err;
       }
     });

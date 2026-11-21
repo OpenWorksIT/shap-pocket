@@ -47,7 +47,7 @@ describe('a company file and moving accounts (IFRS, accounting)', () => {
     const cat = (await env.sql<{ name: string; kind: string }[]>`select name, kind from cost_categories where id = ${petrol}`)[0]!;
     expect((await owner.call({ method: 'PUT', url: `/api/categories/${petrol}`, payload: { name: cat.name, kind: cat.kind, accountId: prepaid.id } })).statusCode).toBe(200);
     const [log] = await env.sql<{ details: Record<string, unknown> }[]>`select details from audit_log where action = 'moved_to_account'`;
-    expect(log!.details.moved).toEqual({ thisYearCents: 50_000, lastYearCents: 30_000, earlierCents: 0 });
+    expect(log!.details.moved).toEqual([{ fyEnd: fy.end, cents: 50_000 }, { fyEnd: financialYear(addDays(fy.start, -1), settings.fyEndMonth).end, cents: 30_000 }]);
     // The bank has last year's cost in a closed year; a spare source on it, never used, still moves.
     await env.sql`update settings set lock_date = ${addDays(fy.start, -1)}::date where id`;
     const second = await owner.post<{ id: string }>('/api/accounts', { code: '1003', name: 'Made-up Second Bank', type: 'asset', statementLine: 'cash', active: true });
@@ -84,6 +84,6 @@ describe('move-in and the VAT201 (SARS)', () => {
   it('says under the boxes that import VAT journalled against the bank isn’t in them', () => {
     const screen = web('components/TaxForms.tsx');
     const note = screen.slice(screen.indexOf('{data.handVatLines ? ('), screen.indexOf('<section className="panel">', screen.indexOf('{data.handVatLines ? (')));
-    expect(screen.replace(note, '')).toMatch(/Import VAT journalled against the bank looks like a payment to SARS, so it isn’t in the boxes or counted with journals typed in: as input tax it goes in field 14A or 15A, which Shap Pocket doesn’t fill, for you or your accountant to add\./);
+    expect(screen.replace(note, '')).toMatch(/Import VAT journalled against the bank, cash, a card or your own money looks like a payment to SARS, so it isn’t in the boxes or in the note on journals typed in: it goes in 14A or 15A too, which Shap Pocket doesn’t fill, for you or your accountant to add\./);
   });
 });

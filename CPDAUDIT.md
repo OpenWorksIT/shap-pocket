@@ -185,6 +185,8 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   and refunds, VAT with PAYE among them), read once per journal; a journal of up to 1 000 lines, and
   a share with a longer one said before it's offered. Pocket has no forecast, budgets or staff, so
   those findings don't arise. Tests: `review-shap-1.33.test.ts`, `review-shap-1.33-security.test.ts`,
-  `review-shap-1.33-round6.test.ts` and `review-shap-1.33-round7.test.ts` (a company file keeps
-  each account's line, a share's journal however its id is written, a move's amounts logged),
-  each failing without its fix.
+  `review-shap-1.33-round6.test.ts`, `review-shap-1.33-round7.test.ts` (a company file keeps
+  each account's line, a share's journal however its id is written, a move's amounts logged) and
+  the `review-shap-1.33-round8-*` files (a closed year's entries counted as they are, a cost type's
+  kind, a sole proprietor's February year end from a company file, a journal id in an array), each
+  failing without its fix.

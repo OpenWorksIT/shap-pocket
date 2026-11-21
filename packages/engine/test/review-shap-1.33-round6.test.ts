@@ -208,7 +208,7 @@ describe('moving a used payment account or cost type (IFRS, accounting, words)',
     // From a company file: refused the same way, and a closed year's history isn't moved.
     const file = await owner.call({ method: 'POST', url: '/api/company-file', payload: { file: { format: 'shap-company/1', sources: [{ name: 'Business bank', kind: 'bank', account: '1079' }] } } });
     expect(file.statusCode).toBe(400);
-    expect(file.json().error).toMatch(/^The company file puts “Business bank” \(Paid from \/ into\) on another account\. What’s already captured with this would move on or off the statements’ cash line with it\. Change the file \(give it a new name there, or leave it out\) and load it again\. Or give the new account the same line in the file, after checking with your accountant\.$/);
+    expect(file.json().error).toMatch(/^The company file puts “Business bank” \(Paid from \/ into\) on another account\. What’s already captured with this would move on or off the statements’ cash line with it\. Change the file \(give it a new name there, or leave it out\) and load it again\. Or, if the new account has nothing in it yet, put it on the same line in the file, after checking with your accountant\.$/);
     const till = await owner.post<{ id: string }>('/api/sources', { name: 'Made-up till', kind: 'cash', accountId: await r.acc('bank') });
     await owner.post('/api/costs', { date: addDays(fy.start, -30), description: 'Made-up fuel last year', supplier: 'Made-up Garage', amountCents: 20_000, categoryId: await r.cat('Petrol'), sourceId: till.id });
     await env.sql`update settings set lock_date = ${addDays(fy.start, -1)}::date where id`;
@@ -252,7 +252,7 @@ describe('the sixth round’s words', () => {
     expect(latePayNote('2027-02', '2027-03-05')).toMatch(/^The pay date is in the next tax year \(from 1 March 2027\)\./);
     const log = web('components/AuditLog.tsx');
     for (const key of ["account: 'Account'", "payment_source: 'Paid from / into'", "cost_category: 'Cost type'", "account_line_changed: 'line or type changed'", "moved_to_account: 'moved onto another account'"]) expect(log).toContain(`  ${key}`);
-    expect(log).toMatch(/bits\.push\(`from \$\{accountWords\(d\.from\)\} to \$\{accountWords\(d\.to\)\}\$\{typeof d\.by === 'string' \? ` · by \$\{d\.by\}` : ''\}`\)/);
+    expect(log).toMatch(/bits\.push\(`from \$\{accountWords\(d\.from\)\} to \$\{accountWords\(d\.to\)\}\$\{movedWords\(d\.moved\)\}\$\{typeof d\.by === 'string' \? ` · by \$\{d\.by\}` : ''\}`\)/);
     const screen = web('components/TaxForms.tsx');
     expect(screen).not.toMatch(/Journals typed in added <Money cents=\{data\.handVatAddedCents \?\? 0\} \/> to the VAT owed and took/);
     expect(screen).toMatch(/\(data\.handVatAddedCents \?\? 0\) > 0 \? \(/);
