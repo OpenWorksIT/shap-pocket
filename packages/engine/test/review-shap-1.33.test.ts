@@ -237,11 +237,24 @@ describe('VAT on a journal typed in', () => {
     await owner.post('/api/sources', { name: 'Made-up card', kind: 'card', accountId: cardAcc!.id });
     await owner.post('/api/journals', { date: p.start, description: 'Made-up VAT paid by card', lines: [{ accountId: await r.acc('vat'), debitCents: 20_000 }, { accountId: cardAcc!.id, creditCents: 20_000 }] });
     expect(await vat()).toMatchObject({ handVatLines: 0 });
+    // A refund received with SARS's interest beside it: a refund too (accounting, fifth round).
+    await owner.post('/api/journals', { date: p.start, description: 'Made-up VAT refund with interest', lines: [{ accountId: await r.acc('bank'), debitCents: 78_000 }, { accountId: await r.acc('vat'), creditCents: 75_000 }, { accountId: await r.acc('interest_income'), creditCents: 3_000 }] });
+    expect(await vat()).toMatchObject({ handVatLines: 0 });
     await owner.post('/api/journals', { date: p.start, description: 'Made-up cash sale', lines: [{ accountId: await r.acc('bank'), debitCents: 115_000 }, { accountId: await r.acc('revenue_other'), creditCents: 100_000 }, { accountId: await r.acc('vat'), creditCents: 15_000 }] });
     expect(await vat()).toMatchObject({ handVatAddedCents: 15_000, handVatOffCents: 0, handVatLines: 1 });
     const items = await expectCleanAudit(env.sql);
     expect(items.some((i) => i.level === 'warn' && /^journals by hand moved the VAT account in \S+ to \S+ \(R\s?150\.00 added to the VAT owed\), besides what Pocket can tell is a payment to or refund from SARS/.test(i.text))).toBe(true);
     const screen = readFileSync(join(__dirname, '..', '..', '..', 'apps', 'web', 'src', 'components', 'TaxForms.tsx'), 'utf8');
     expect(screen).toMatch(/Journals typed in added <Money cents=\{data\.handVatAddedCents \?\? 0\} \/> to the VAT owed and took <Money cents=\{data\.handVatOffCents \?\? 0\} \/> off it in this period/);
+  });
+});
+
+describe('moving in: SARS’s payroll taxes on their own accounts (Shap 1.33, fifth round)', () => {
+  it('guesses PAYE, UIF and SDL owed as SARS’s, and VAT payable or receivable as VAT', async () => {
+    const { suggestAccount } = await import('../src/modules/movein.js');
+    const acc = (systemKey: string, type: 'asset' | 'liability' | 'expense' = 'liability') => ({ id: systemKey, code: '', name: `Made-up ${systemKey}`, type, systemKey });
+    const accounts = ['paye_payable', 'uif_payable', 'sdl_payable', 'wages_payable', 'payables', 'vat', 'income_tax_payable'].map((k) => acc(k)).concat([acc('receivables', 'asset'), acc('general_labour', 'expense')]);
+    const guess = (name: string) => suggestAccount({ code: '', name, cents: 0 } as never, accounts);
+    expect(['PAYE payable', 'UIF control', 'SDL payable', 'Accrued wages', 'VAT payable', 'VAT receivable', 'Trade payables'].map(guess)).toEqual(['paye_payable', 'uif_payable', 'sdl_payable', 'wages_payable', 'vat', 'vat', 'payables']);
   });
 });

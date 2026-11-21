@@ -22,6 +22,9 @@ What changed in each version of Shap Pocket, newest first.
   - The books audit points out a bank or cash account you pay from that isn't on the statements'
     cash line (one emptied and closed this year too), with what usually decides it (for a deposit,
     and for an overdraft), for you and your accountant to judge: Pocket doesn't move its line.
+  - Moving in: a trial balance's PAYE, UIF and SDL owed are suggested on their own SARS accounts, not
+    on wages owed; VAT, PAYE or income tax "payable" (or VAT "receivable") as SARS's, not creditors
+    (or debtors). You still confirm each account.
   - A pay date before the month before its run's month, or more than six months after it, is
     refused as a likely slip of the year or month (it could be taxed on the wrong year's tables or go on the wrong EMP201). A run paid
     more than a month after its month says that which EMP201 it goes on is your accountant's to check.
