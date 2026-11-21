@@ -36,13 +36,19 @@ export function registerDashboardRoutes(app: FastifyInstance, ctx: Ctx): void {
     await freshTotals(sql);
     const [series, owing, workers, unallocated, materialsNoJob, balances, projects, uncaptured] = await Promise.all([
       // Last 12 months: invoiced, cost of sales, running costs
-      sql<{ month: string; income: number; cos: number; expenses: number }[]>`
+      sql<{ month: string; income: number; cos: number; expenses: number; revenue: number; cosLine: number; fin: number; tax: number }[]>`
         select to_char(l.date, 'YYYY-MM') as month,
           (-sum(l.amount_cents) filter (where a.type = 'income'))::bigint as income,
           (sum(l.amount_cents) filter (where a.type = 'cost_of_sales'))::bigint as cos,
-          (sum(l.amount_cents) filter (where a.type = 'expense'))::bigint as expenses
+          (sum(l.amount_cents) filter (where a.type = 'expense'))::bigint as expenses,
+          -- Revenue and cost of sales as the statements have them (their lines): gross profit.
+          (-sum(l.amount_cents) filter (where a.statement_line = 'revenue'))::bigint as revenue,
+          (sum(l.amount_cents) filter (where a.statement_line = 'cost_of_sales'))::bigint as cos_line,
+          (sum(l.amount_cents) filter (where a.statement_line = 'finance_costs'))::bigint as fin,
+          (sum(l.amount_cents) filter (where a.statement_line = 'income_tax'))::bigint as tax
         from ledger_totals l join accounts a on a.id = l.account_id
-        where l.date between ${firstMonth}::date and ${monthEnd(now)}::date and a.type in ('income', 'cost_of_sales', 'expense')
+        -- To today: "to date" (an entry dated later this month isn't in yet).
+        where l.date between ${firstMonth}::date and ${now}::date and a.type in ('income', 'cost_of_sales', 'expense')
         group by 1 order by 1`,
       sql.unsafe(`
         select d.id, d.number, d.issue_date, d.due_date, d.total_cents, coalesce(r.paid, 0)::bigint as paid_cents,
@@ -79,10 +85,10 @@ export function registerDashboardRoutes(app: FastifyInstance, ctx: Ctx): void {
       const income = r?.income ?? 0;
       const cos = r?.cos ?? 0;
       const expenses = r?.expenses ?? 0;
-      return { key: m, label: monthLabel(m), incomeCents: income, costOfSalesCents: cos, expensesCents: expenses, profitCents: income - cos - expenses };
+      return { key: m, label: monthLabel(m), incomeCents: income, costOfSalesCents: cos, expensesCents: expenses, profitCents: income - cos - expenses, revenueCents: Number(r?.revenue ?? 0), grossCostCents: Number(r?.cosLine ?? 0), financeCents: Number(r?.fin ?? 0), taxCents: Number(r?.tax ?? 0) };
     });
     const fyMonths = months.filter((m) => `${m.key}-01` >= fy.start);
-    const sumOf = (xs: typeof months, k: 'incomeCents' | 'costOfSalesCents' | 'expensesCents' | 'profitCents') => xs.reduce((s, m) => s + m[k], 0);
+    const sumOf = (xs: typeof months, k: 'incomeCents' | 'costOfSalesCents' | 'expensesCents' | 'profitCents' | 'revenueCents' | 'grossCostCents' | 'financeCents' | 'taxCents') => xs.reduce((s, m) => s + m[k], 0);
     const bal = (k: string) => balances.find((b) => b.key === k)?.balance ?? 0;
     const thisMonth = months[months.length - 1]!;
 
@@ -93,9 +99,18 @@ export function registerDashboardRoutes(app: FastifyInstance, ctx: Ctx): void {
       thisMonth,
       yearToDate: {
         incomeCents: sumOf(fyMonths, 'incomeCents'),
-        grossProfitCents: sumOf(fyMonths, 'incomeCents') - sumOf(fyMonths, 'costOfSalesCents'),
+        // Revenue less cost of sales, as the income statement's gross profit (Shap 1.33's reviews).
+        revenueCents: sumOf(fyMonths, 'revenueCents'),
+        grossProfitCents: sumOf(fyMonths, 'revenueCents') - sumOf(fyMonths, 'grossCostCents'),
         expensesCents: sumOf(fyMonths, 'expensesCents'),
         profitCents: sumOf(fyMonths, 'profitCents'),
+        // Below gross profit, so the tiles add up, as the statements set them out:
+        // gross profit + other income − running costs − finance costs − income tax = profit.
+        otherIncomeCents: sumOf(fyMonths, 'incomeCents') - sumOf(fyMonths, 'revenueCents'),
+        financeCostsCents: sumOf(fyMonths, 'financeCents'),
+        incomeTaxCents: sumOf(fyMonths, 'taxCents'),
+        runningCostsCents:
+          sumOf(fyMonths, 'revenueCents') - sumOf(fyMonths, 'grossCostCents') + (sumOf(fyMonths, 'incomeCents') - sumOf(fyMonths, 'revenueCents')) - sumOf(fyMonths, 'profitCents') - sumOf(fyMonths, 'financeCents') - sumOf(fyMonths, 'taxCents'),
       },
       months,
       owing: {

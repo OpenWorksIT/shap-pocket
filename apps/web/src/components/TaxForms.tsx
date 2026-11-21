@@ -18,6 +18,10 @@ interface Vat201Data {
   due: string;
   periods: { start: string; end: string }[];
   fields: Record<string, number>;
+  /** VAT on journals typed in during the period (not what Pocket can tell is a payment): not in the boxes. */
+  handVatAddedCents?: number;
+  handVatOffCents?: number;
+  handVatLines?: number;
 }
 
 const periodLabel = (p: { start: string; end: string }) =>
@@ -61,6 +65,11 @@ export function Vat201() {
       </div>
       <EstimateNote />
       {pending && <div className="banner signal small">This period hasn’t ended yet: the figures will still change.</div>}
+      {data.handVatLines ? (
+        <div className="banner alert small">
+          Journals typed in added <Money cents={data.handVatAddedCents ?? 0} /> to the VAT owed and took <Money cents={data.handVatOffCents ?? 0} /> off it in this period ({data.handVatLines} line{data.handVatLines === 1 ? '' : 's'}). Shap Pocket leaves out what it can tell is a payment to or refund from SARS (VAT against the bank, cash, a card or your own money); one paid together with other tax may still be counted here. The boxes below are worked out from invoices, costs and assets, so they leave these out: whether and where they go on the return (a cash sale, a correction) is yours or your accountant’s to decide before you file.
+        </div>
+      ) : null}
       <section className="panel">
         <div className="panel-head spread">
           <strong>VAT201 for {periodLabel(data.period)}</strong>

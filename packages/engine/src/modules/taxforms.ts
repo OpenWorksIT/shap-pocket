@@ -8,7 +8,7 @@ import { addMonths, entity, financialYear, lastBusinessDay, monthEnd, monthsBetw
 import { z } from 'zod';
 import { requireRole } from '../auth.js';
 import type { Ctx } from '../context.js';
-import { freshTotals, getSettings, today } from '../lib/books.js';
+import { freshTotals, getSettings, handVat, today } from '../lib/books.js';
 import { badRequest } from '../lib/errors.js';
 import { parse } from '../lib/validate.js';
 
@@ -91,7 +91,9 @@ export function registerTaxFormRoutes(app: FastifyInstance, ctx: Ctx): void {
       periods.push(p);
       p = vatPeriod(addMonths(p.start, -1), cat, settings.fyEndMonth);
     }
-    return { category: cat, registered: settings.vatRegistered, vatNumber: settings.vatNumber, period, due: vat201Due(period.end), periods, fields: await vat201(sql, period.start, period.end) };
+    // VAT on journals typed in: not in the boxes, said so beside them.
+    const hand = await handVat(sql, period.start, period.end);
+    return { category: cat, registered: settings.vatRegistered, vatNumber: settings.vatNumber, period, due: vat201Due(period.end), periods, fields: await vat201(sql, period.start, period.end), handVatAddedCents: hand.addedCents, handVatOffCents: hand.offCents, handVatLines: hand.lines };
   });
 
   /** Turnover tax for a year of assessment: turnover so far, the year projected, the two interim payments. */

@@ -75,10 +75,11 @@ export function parseStatementAmount(raw: string): number | null {
   if (s.endsWith('-')) (sign = -sign), (s = s.slice(0, -1));
   if (s.startsWith('-')) (sign = -sign), (s = s.slice(1));
   else if (s.startsWith('+')) s = s.slice(1);
-  if (s.includes(',') && s.includes('.')) s = s.replace(/,/g, '');
+  // With both, the last one is the decimal point: 1,234.56 or 1.234,56.
+  if (s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
   else if (/,\d{2}$/.test(s) && (s.match(/,/g) ?? []).length === 1) s = s.replace(',', '.');
   else s = s.replace(/,/g, '');
-  if (!/^\d+(\.\d+)?$/.test(s)) return null;
+  if (!/^(\d+(\.\d+)?|\.\d+)$/.test(s)) return null;
   return sign * Math.round(Number(s) * 100);
 }
 
@@ -221,7 +222,9 @@ export function parseStatementCsv(text: string, opts: { flip?: boolean } = {}): 
 export function fingerprints(rows: StatementRow[]): string[] {
   const seen = new Map<string, number>();
   return rows.map((r) => {
-    const base = `${r.date}|${r.amountCents}|${r.description.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    // The description's first 2 000 letters and digits: enough to tell lines apart, and short
+    // enough for the database's index (a longer key can't be stored).
+    const base = `${r.date}|${r.amountCents}|${r.description.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 2000)}`;
     const n = (seen.get(base) ?? 0) + 1;
     seen.set(base, n);
     return `${base}|${n}`;

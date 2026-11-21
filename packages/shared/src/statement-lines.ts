@@ -11,7 +11,7 @@
  * IFRS for SMEs Accounting Standard: https://www.ifrs.org/issued-standards/ifrs-for-smes/
  */
 import type { AccountType } from './enums.js';
-import type { BusinessType } from './entities.js';
+import { entity, type BusinessType } from './entities.js';
 
 export type StatementSection =
   | 'non_current_assets'
@@ -215,3 +215,19 @@ export const SECTION_LABELS: Record<StatementSection, string> = {
   finance_costs: 'Finance costs',
   income_tax: 'Income tax expense',
 };
+
+/**
+ * Said after Home's net profit when no income tax is captured in the year: by who pays it. A
+ * company, CC, NPC or trust pays its own (the books have none until it's captured); a sole
+ * proprietor's or partners' tax is their own, never the business's, so it isn't "not yet"
+ * captured; turnover tax, and an approved PBO's exemption, aren't income tax on this profit, so
+ * nothing is said. (Shap 1.33.)
+ */
+export function noIncomeTaxWords(s: { businessType: string; turnoverTax?: boolean; approvedPbo?: boolean }): string {
+  if (s.turnoverTax) return '';
+  const { taxedAs } = entity(s.businessType);
+  if (taxedAs === 'individual') return '; the owner’s own income tax isn’t in the business’s books';
+  if (taxedAs === 'partners') return '; the partners’ own income tax isn’t in the business’s books';
+  if (s.businessType === 'npc' && s.approvedPbo) return '';
+  return '; before income tax (none captured in the books: your accountant works it out)';
+}
