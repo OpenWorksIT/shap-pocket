@@ -16,27 +16,34 @@ What changed in each version of Shap Pocket, newest first.
   - Home's first figure is your revenue this year (it was all income, interest included), and gross
     profit is revenue less cost of sales, as the income statement sets them out; net profit says the
     running costs, finance costs, income tax (as captured in the books) and other income that bring
-    gross profit to it, to today; when none is captured, it says the owner's (or partners') own
-    income tax isn't in the books, or that it's before a company's income tax. Under them:
+    gross profit to it, to today; when none is captured, it says your (or the partners') own tax
+    isn't in the books, that it's before a company's income tax, or (on turnover tax) that a
+    company's is in it only as captured. Under them:
     rough guides worked out from the books, not advice.
   - The books audit points out a bank or cash account you pay from that isn't on the statements'
     cash line (one emptied and closed this year too), with what usually decides it (for a deposit,
     and for an overdraft), for you and your accountant to judge: Pocket doesn't move its line.
-    Moving a used payment account onto another account is refused when its history would move on
-    or off the cash line with it, and a change of an account's line, or of the account behind a
-    payment account or cost type, is in the audit log.
+    Moving a used payment account (or cost type) onto another account is refused when its history would move on
+    or off the cash line with it, from a company file too, and a change of an account's line, or of
+    the account behind a payment account or cost type, is in the audit log, with both accounts'
+    names and lines.
   - Moving in: a trial balance's PAYE, UIF and SDL owed are suggested on their own SARS accounts, not
     on wages owed; VAT, PAYE or income tax "payable" (or VAT "receivable") as SARS's, not creditors
     (or debtors). You still confirm each account.
   - A pay date before the month before its run's month, or more than six months after it, is
     refused as a likely slip of the year or month (it could be taxed on the wrong year's tables or go on the wrong EMP201). A run paid
-    more than a month after its month says that which EMP201 it goes on is your accountant's to check.
+    more than a month after its month, or in another tax year (a February run paid in March), says
+    that which EMP201 it goes on, and which tax year's tables, are your accountant's to check.
   - When journals typed in (a cash sale journalled, a correction) moved the VAT account in a period,
-    other than as payments to SARS, the VAT201 screen and the books audit say by how much: the boxes
-    are worked out from invoices, costs and assets, so they leave those out.
+    other than as payments to or refunds from SARS (VAT against the bank, cash, a card, your own
+    money or SARS's other taxes), the VAT201 screen and the books audit say what they added and what
+    they took off: the boxes are worked out from invoices, costs and assets, so they leave those
+    out. Import VAT journalled against the bank looks like a payment, so it isn't counted there
+    either (the screen says so).
   - A journal takes up to 1 000 lines: split a longer one into journals that each balance. (One
     very long journal could make the VAT201 screen and the books audit take a long time: they now
-    read each journal once.)
+    read each journal once.) Sharing with your accountant says so when one already in your books
+    is longer, as your accountant's Shap won't take it.
 
 ## 1.11.3 (18 November 2026)
 

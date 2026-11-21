@@ -101,10 +101,11 @@ describe('Home’s tiles: revenue first, and gross profit as the income statemen
     expect(home).toMatch(/income tax as captured in the books`/);
     expect(home).toMatch(/\(data\.yearToDate\.incomeTaxCents \? '' : noIncomeTaxWords\(settings\)\)/);
     // By who pays it: a sole proprietor's tax is their own, never "not yet" in the books.
-    expect(noIncomeTaxWords({ businessType: 'sole_prop' })).toBe('; the owner’s own income tax isn’t in the business’s books');
+    expect(noIncomeTaxWords({ businessType: 'sole_prop' })).toBe('; your own income tax isn’t in the business’s books');
     expect(noIncomeTaxWords({ businessType: 'partnership' })).toBe('; the partners’ own income tax isn’t in the business’s books');
-    expect(noIncomeTaxWords({ businessType: 'company' })).toBe('; before income tax (none captured in the books: your accountant works it out)');
-    expect(noIncomeTaxWords({ businessType: 'company', turnoverTax: true })).toBe('');
+    expect(noIncomeTaxWords({ businessType: 'company' })).toBe('; before income tax (none captured in the books)');
+    expect(noIncomeTaxWords({ businessType: 'company', turnoverTax: true })).toBe('; turnover tax is in it only as far as it’s captured in the books');
+    expect(noIncomeTaxWords({ businessType: 'sole_prop', turnoverTax: true })).toBe('; your own tax isn’t in the business’s books');
     expect(home).toMatch(/<p className="xs muted">\{PROFIT_NOTE\}<\/p>/);
     expect(home).toMatch(/PROFIT_NOTE = 'Worked out from what’s captured in the books, to today\. Rough guides to plan with, not advice\.'/);
   });
@@ -143,8 +144,9 @@ describe('a pay date a year off, a run paid late, and one that’s final', () =>
   it('says which EMP201 is the accountant’s to check for a run paid more than a month late', () => {
     expect(latePayNote('2026-10', '2026-11-30')).toBeNull();
     expect(latePayNote('2026-10', '2026-12-01')).toBe('The pay date is more than a month after October 2026. Employees’ tax arises when the business pays the salary, or becomes liable to pay it, so which EMP201 this goes on is for your accountant to check: Shap Pocket puts it on the EMP201 for the month it’s paid.');
-    expect(latePayNote('2027-01', '2027-04-25')).toMatch(/and which tax year’s tables,/);
-    expect(latePayNote('2027-02', '2027-03-05')).toMatch(/^The pay date is in the tax year after February 2027’s \(from 1 March\)\./);
+    expect(latePayNote('2027-01', '2027-04-25')).toMatch(/so which EMP201 this goes on and which tax year’s tables apply are for your accountant to check/);
+    expect(latePayNote('2027-02', '2027-03-05')).toMatch(/^The pay date is in the next tax year \(from 1 March 2027\)\./);
+    expect(latePayNote('2027-03', '2027-02-26')).toMatch(/^The pay date is in the previous tax year \(to 28 February 2027\)\./);
     const page = readFileSync(join(__dirname, '..', '..', '..', 'apps', 'web', 'src', 'pages', 'Payroll.tsx'), 'utf8');
     expect(page).toMatch(/<Field label="Pay date" hint=\{latePayNote\(run\.period, run\.payDate\) \?\? undefined\}>/);
   });
@@ -179,7 +181,7 @@ describe('a bank account that isn’t on the cash line', () => {
     const [logged] = await env.sql<{ n: number }[]>`select count(*)::int as n from audit_log where action = 'account_to_cash_line'`;
     expect(Number(logged!.n)).toBe(0);
     const warned = (await expectCleanAudit(env.sql)).filter((i) => i.level === 'warn').map((i) => i.text);
-    expect(warned.some((t) => /^Made-up Savings Two is a bank or cash account you pay \(or paid\) from, but not on the statements' cash line\. Whether it's cash is a judgement \(money you can draw on demand is; a deposit of about three months or less from when it was made, kept to pay what's coming, usually counts too; one fixed for longer usually doesn't\): the cash flow statement leaves it out of cash\. Check it with your accountant before changing its line/.test(t))).toBe(true);
+    expect(warned.some((t) => /^Made-up Savings Two is a bank or cash account you pay \(or paid\) from, but not on the statements' cash line\. Whether it's cash is a judgement \(money you can draw on demand is; a deposit fixed for about three months or less when it was made, for an amount that won't change, kept to pay what's coming, usually counts too; one fixed for longer, or whose value goes up and down \(shares, unit trusts\), usually doesn't\): the cash flow statement leaves it out of cash\. Check it with your accountant before changing its line/.test(t))).toBe(true);
     expect(warned.some((t) => /^Made-up Facility is a liability you pay \(or paid\) from as a bank or cash account, but not on the statements' cash or bank overdraft line\. A bank overdraft counts as cash only when it's repayable on demand and part of day-to-day cash management/.test(t))).toBe(true);
     // Pocket's Home shows no cash figure: the audit doesn't say it does.
     expect(warned.join(' ')).not.toMatch(/Home/);
@@ -205,7 +207,7 @@ describe('a bank account that isn’t on the cash line', () => {
     await env.sql`insert into payment_sources (name, kind, account_id, sort, active) values ('made-up notice deposit', 'bank', ${notice!.id}, 97, false)`;
     await owner.post('/api/journals', { date: addDays(lastYearStart, -30), description: 'To notice deposit (made up)', lines: [{ accountId: notice!.id, debitCents: 800_000 }, { accountId: bankAccount, creditCents: 800_000 }] });
     const warned = (await expectCleanAudit(env.sql)).filter((i) => i.level === 'warn').map((i) => i.text).join(' ');
-    expect(warned).toMatch(/Made-up Closed Savings, Made-up Notice Deposit are bank or cash accounts you pay \(or paid\) from, but not on the statements' cash line\. Whether each is cash is a judgement/);
+    expect(warned).toMatch(/Made-up Closed Savings and Made-up Notice Deposit are bank or cash accounts you pay \(or paid\) from, but not on the statements' cash line\. Whether each is cash is a judgement/);
     expect(warned).toMatch(/Check each with your accountant before changing their lines/);
     expect(warned).not.toMatch(/Made-up Long Gone/);
   });
@@ -243,9 +245,11 @@ describe('VAT on a journal typed in', () => {
     await owner.post('/api/journals', { date: p.start, description: 'Made-up cash sale', lines: [{ accountId: await r.acc('bank'), debitCents: 115_000 }, { accountId: await r.acc('revenue_other'), creditCents: 100_000 }, { accountId: await r.acc('vat'), creditCents: 15_000 }] });
     expect(await vat()).toMatchObject({ handVatAddedCents: 15_000, handVatOffCents: 0, handVatLines: 1 });
     const items = await expectCleanAudit(env.sql);
-    expect(items.some((i) => i.level === 'warn' && /^journals by hand moved the VAT account in \S+ to \S+ \(R\s?150\.00 added to the VAT owed\), besides what Pocket can tell is a payment to or refund from SARS/.test(i.text))).toBe(true);
+    expect(items.some((i) => i.level === 'warn' && /^journals by hand moved the VAT account in \S+ to \S+ \(R\s?150\.00 added to the VAT owed\), apart from what Pocket can tell is a payment to or refund from SARS \(VAT against money or SARS’s other taxes; import VAT journalled against the bank looks the same, so it’s left out too\)/.test(i.text))).toBe(true);
     const screen = readFileSync(join(__dirname, '..', '..', '..', 'apps', 'web', 'src', 'components', 'TaxForms.tsx'), 'utf8');
-    expect(screen).toMatch(/Journals typed in added <Money cents=\{data\.handVatAddedCents \?\? 0\} \/> to the VAT owed and took <Money cents=\{data\.handVatOffCents \?\? 0\} \/> off it in this period/);
+    expect(screen).toMatch(/added <Money cents=\{data\.handVatAddedCents!\} \/> to the VAT owed/);
+    expect(screen).toMatch(/took <Money cents=\{data\.handVatOffCents!\} \/> off the VAT owed/);
+    expect(screen).toMatch(/Shap Pocket leaves out what it can tell is a payment to or refund from SARS \(VAT against the bank, cash, a card, your own money or SARS’s other taxes, such as PAYE\), and import VAT journalled against the bank looks the same, so it isn’t counted here either\./);
   });
 });
 
@@ -280,7 +284,7 @@ describe('moving a used payment account', () => {
     const move = () => owner.call({ method: 'PUT', url: `/api/sources/${bank}`, payload: { name: 'Business bank', kind: 'bank', accountId: acc.id } });
     const refused = await move();
     expect(refused.statusCode).toBe(400);
-    expect(refused.json().error).toMatch(/^What’s already captured with this would move on or off the statements’ cash line with it, last year’s figures too\./);
+    expect(refused.json().error).toBe('What’s already captured with this would move on or off the statements’ cash line with it. If the account it’s on now is on the wrong line, change that account’s line instead (Settings → Lists → Chart of accounts), after checking with your accountant; if the new account has nothing in it yet, put it on the same line first; otherwise make a new payment account for what’s coming.');
     await owner.post(`/api/accounts/${acc.id}`, { code: '1078', name: 'Made-up New Bank', type: 'asset', statementLine: 'cash', active: true }, 'PUT');
     expect((await move()).statusCode).toBe(200);
     const log = await env.sql<{ action: string }[]>`select action from audit_log where action in ('account_line_changed', 'moved_to_account') order by at, action`;

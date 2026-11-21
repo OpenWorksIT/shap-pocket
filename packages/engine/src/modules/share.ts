@@ -91,6 +91,8 @@ export async function makeShare(db: Db, userId: string | null): Promise<ShareFil
   };
   // What Shap reads: the same schema and limits. A file it would refuse is never offered.
   const checked = pocketShareSchema.safeParse(file);
+  if (checked.success && shareProblem(checked.data)?.kind === 'long_journal')
+    throw badRequest('A journal in your books has more than 1 000 lines, more than your accountant’s Shap takes: split it into journals that each balance, then share again.');
   if (!checked.success || shareProblem(checked.data)) throw new HttpError(500, 'Shap Pocket couldn’t make a share your accountant’s Shap can read. That shouldn’t happen: please let us know: tap Feedback, then Bug found.', 'internal');
   // One pending at a time: an older one that never went is dropped.
   await db`delete from shares where sent_at is null`;

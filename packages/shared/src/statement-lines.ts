@@ -220,14 +220,16 @@ export const SECTION_LABELS: Record<StatementSection, string> = {
  * Said after Home's net profit when no income tax is captured in the year: by who pays it. A
  * company, CC, NPC or trust pays its own (the books have none until it's captured); a sole
  * proprietor's or partners' tax is their own, never the business's, so it isn't "not yet"
- * captured; turnover tax, and an approved PBO's exemption, aren't income tax on this profit, so
- * nothing is said. (Shap 1.33.)
+ * captured, turnover tax too; a company's turnover tax is on its turnover, not this profit (in it
+ * only as captured); an approved PBO's trading beyond its partial exemption is taxed (SARS
+ * Interpretation Note 24), so that's what's said. (Shap 1.33.)
  */
 export function noIncomeTaxWords(s: { businessType: string; turnoverTax?: boolean; approvedPbo?: boolean }): string {
-  if (s.turnoverTax) return '';
   const { taxedAs } = entity(s.businessType);
-  if (taxedAs === 'individual') return '; the owner’s own income tax isn’t in the business’s books';
-  if (taxedAs === 'partners') return '; the partners’ own income tax isn’t in the business’s books';
-  if (s.businessType === 'npc' && s.approvedPbo) return '';
-  return '; before income tax (none captured in the books: your accountant works it out)';
+  const tax = s.turnoverTax ? 'tax' : 'income tax';
+  if (taxedAs === 'individual') return `; your own ${tax} isn’t in the business’s books`;
+  if (taxedAs === 'partners') return `; the partners’ own ${tax} isn’t in the business’s books`;
+  if (s.turnoverTax) return '; turnover tax is in it only as far as it’s captured in the books';
+  if (s.businessType === 'npc' && s.approvedPbo) return '; before any income tax on trading beyond the PBO exemption (none captured in the books)';
+  return '; before income tax (none captured in the books)';
 }
