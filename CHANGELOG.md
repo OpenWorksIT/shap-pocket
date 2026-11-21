@@ -2,6 +2,17 @@
 
 What changed in each version of Shap Pocket, newest first.
 
+## 1.11.4 (21 November 2026)
+
+- From Shap's reviews of 1.33, in the code Pocket shares with it:
+  - A bank statement's amounts written -.50 or 1.234,56 (a full stop between thousands, a comma
+    before the cents) are read right: they were skipped, or read as a hundredth of the amount.
+  - A statement line with a very long description no longer stops the statement coming in.
+  - A cost you pay each month is watched on the account you last paid it from: moved from a card to
+    the bank, it's the bank's now.
+  - What you're responsible for filing and paying names CIPC and the Compensation Fund with SARS and
+    the Department of Employment and Labour (the terms already said so; this is the summary of them).
+
 ## 1.11.3 (18 November 2026)
 
 - From Shap's reviews of 1.32, in the code Pocket shares with it:

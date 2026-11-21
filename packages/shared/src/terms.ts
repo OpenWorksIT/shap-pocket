@@ -32,7 +32,7 @@ export function termsPoints(app: 'shap' | 'pocket'): { title: string; body: stri
     },
     {
       title: 'You are responsible for what you file and pay',
-      body: 'Your returns, declarations and payments to SARS and the Department of Employment and Labour (VAT201, EMP201, EMP501, IRP6, ITR14, ITR12, DTR01, UIF and others), your registrations, and meeting their deadlines are your responsibility, as are the accuracy and completeness of what you capture.',
+      body: 'Your returns, declarations and payments to SARS, the Department of Employment and Labour, CIPC and the Compensation Fund (VAT201, EMP201, EMP501, IRP6, ITR14, ITR12, DTR01, UIF, annual returns, the return of earnings and others), your registrations, and meeting their deadlines are your responsibility, as are the accuracy and completeness of what you capture.',
     },
     {
       title: 'Your data is yours, and so are its backups',
