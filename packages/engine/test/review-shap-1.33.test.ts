@@ -179,7 +179,7 @@ describe('a bank account that isn’t on the cash line', () => {
     const [logged] = await env.sql<{ n: number }[]>`select count(*)::int as n from audit_log where action = 'account_to_cash_line'`;
     expect(Number(logged!.n)).toBe(0);
     const warned = (await expectCleanAudit(env.sql)).filter((i) => i.level === 'warn').map((i) => i.text);
-    expect(warned.some((t) => /^Made-up Savings Two is a bank or cash account you pay \(or paid\) from, but not on the statements' cash line\. Whether it's cash is a judgement \(money that can be drawn at short notice usually is; a deposit fixed for more than about three months usually isn't\): the cash flow statement leaves it out of cash\. Check it with your accountant before changing its line/.test(t))).toBe(true);
+    expect(warned.some((t) => /^Made-up Savings Two is a bank or cash account you pay \(or paid\) from, but not on the statements' cash line\. Whether it's cash is a judgement \(money you can draw on demand is; a deposit of about three months or less from when it was made, kept to pay what's coming, usually counts too; one fixed for longer usually doesn't\): the cash flow statement leaves it out of cash\. Check it with your accountant before changing its line/.test(t))).toBe(true);
     expect(warned.some((t) => /^Made-up Facility is a liability you pay \(or paid\) from as a bank or cash account, but not on the statements' cash or bank overdraft line\. A bank overdraft counts as cash only when it's repayable on demand and part of day-to-day cash management/.test(t))).toBe(true);
     // Pocket's Home shows no cash figure: the audit doesn't say it does.
     expect(warned.join(' ')).not.toMatch(/Home/);
@@ -256,5 +256,34 @@ describe('moving in: SARS’s payroll taxes on their own accounts (Shap 1.33, fi
     const accounts = ['paye_payable', 'uif_payable', 'sdl_payable', 'wages_payable', 'payables', 'vat', 'income_tax_payable'].map((k) => acc(k)).concat([acc('receivables', 'asset'), acc('general_labour', 'expense')]);
     const guess = (name: string) => suggestAccount({ code: '', name, cents: 0 } as never, accounts);
     expect(['PAYE payable', 'UIF control', 'SDL payable', 'Accrued wages', 'VAT payable', 'VAT receivable', 'Trade payables'].map(guess)).toEqual(['paye_payable', 'uif_payable', 'sdl_payable', 'wages_payable', 'vat', 'vat', 'payables']);
+  });
+});
+
+// Shap 1.33's fifth round (IFRS): moving a used payment account takes its history with it, not on
+// or off the statements' cash line by the way; a change of line or account is logged.
+describe('moving a used payment account', () => {
+  let env: TestEnv;
+  beforeAll(async () => {
+    env = await setup();
+  });
+  afterAll(async () => {
+    await expectCleanAudit(env.sql);
+    await env.close();
+  });
+
+  it('won’t take its history off the cash line, and logs the line and the move', async () => {
+    const owner = await login(env.app);
+    const r = await ref(env.sql);
+    const bank = await r.src('Business bank');
+    await owner.post('/api/costs', { date: addDays(today(), -3), description: 'Made-up fuel', supplier: 'Made-up Garage', amountCents: 50_000, categoryId: await r.cat('Petrol'), sourceId: bank });
+    const acc = await owner.post<{ id: string }>('/api/accounts', { code: '1078', name: 'Made-up New Bank', type: 'asset', active: true });
+    const move = () => owner.call({ method: 'PUT', url: `/api/sources/${bank}`, payload: { name: 'Business bank', kind: 'bank', accountId: acc.id } });
+    const refused = await move();
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().error).toMatch(/^What’s already captured with this would move on or off the statements’ cash line with it, last year’s figures too\./);
+    await owner.post(`/api/accounts/${acc.id}`, { code: '1078', name: 'Made-up New Bank', type: 'asset', statementLine: 'cash', active: true }, 'PUT');
+    expect((await move()).statusCode).toBe(200);
+    const log = await env.sql<{ action: string }[]>`select action from audit_log where action in ('account_line_changed', 'moved_to_account') order by at, action`;
+    expect(log.map((l) => l.action).sort()).toEqual(['account_line_changed', 'moved_to_account']);
   });
 });

@@ -22,6 +22,9 @@ What changed in each version of Shap Pocket, newest first.
   - The books audit points out a bank or cash account you pay from that isn't on the statements'
     cash line (one emptied and closed this year too), with what usually decides it (for a deposit,
     and for an overdraft), for you and your accountant to judge: Pocket doesn't move its line.
+    Moving a used payment account onto another account is refused when its history would move on
+    or off the cash line with it, and a change of an account's line, or of the account behind a
+    payment account or cost type, is in the audit log.
   - Moving in: a trial balance's PAYE, UIF and SDL owed are suggested on their own SARS accounts, not
     on wages owed; VAT, PAYE or income tax "payable" (or VAT "receivable") as SARS's, not creditors
     (or debtors). You still confirm each account.
