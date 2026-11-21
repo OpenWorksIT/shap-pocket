@@ -34,6 +34,9 @@ What changed in each version of Shap Pocket, newest first.
   - When journals typed in (a cash sale journalled, a correction) moved the VAT account in a period,
     other than as payments to SARS, the VAT201 screen and the books audit say by how much: the boxes
     are worked out from invoices, costs and assets, so they leave those out.
+  - A journal takes up to 1 000 lines: split a longer one into journals that each balance. (One
+    very long journal could make the VAT201 screen and the books audit take a long time: they now
+    read each journal once.)
 
 ## 1.11.3 (18 November 2026)
 
