@@ -16,13 +16,14 @@ What changed in each version of Shap Pocket, newest first.
   - Home's first figure is your revenue this year (it was all income, interest included), and gross
     profit is revenue less cost of sales, as the income statement sets them out; net profit says the
     running costs, finance costs, income tax (as captured in the books) and other income that bring
-    gross profit to it, to today, and says it's before income tax when none is captured. Under them:
+    gross profit to it, to today; when none is captured, it says the owner's (or partners') own
+    income tax isn't in the books, or that it's before a company's income tax. Under them:
     rough guides worked out from the books, not advice.
   - The books audit points out a bank or cash account you pay from that isn't on the statements'
-    cash line (one emptied and closed this year too), with the test for an account and for an
-    overdraft, for you and your accountant to judge: Pocket doesn't move its line.
+    cash line (one emptied and closed this year too), with what usually decides it (for a deposit,
+    and for an overdraft), for you and your accountant to judge: Pocket doesn't move its line.
   - A pay date before the month before its run's month, or more than six months after it, is
-    refused as a likely slip of the year or month (it would be taxed on the wrong tables). A run paid
+    refused as a likely slip of the year or month (it could be taxed on the wrong year's tables or go on the wrong EMP201). A run paid
     more than a month after its month says that which EMP201 it goes on is your accountant's to check.
   - When journals typed in (a cash sale journalled, a correction) moved the VAT account in a period,
     other than as payments to SARS, the VAT201 screen and the books audit say by how much: the boxes

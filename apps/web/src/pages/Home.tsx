@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { addDays, formatDate, formatPercent, formatZar, monthLabel, todayIso } from '@shap/shared';
+import { addDays, formatDate, formatPercent, formatZar, monthLabel, noIncomeTaxWords, todayIso } from '@shap/shared';
 import { MonthChart } from '../components/MonthChart';
 import { PageHead } from '../components/Shell';
 import { DocChip, Empty, ErrorBox, Icon, Kpi, Loading, Money, ProjectChip, useToast } from '../components/ui';
@@ -398,7 +398,7 @@ function OwnerHome() {
             .filter(Boolean)
             .join(', ') +
             (data.yearToDate.otherIncomeCents ? `, with ${formatZar(data.yearToDate.otherIncomeCents, { cents: false })} other income` : '') +
-            (data.yearToDate.incomeTaxCents ? '' : '; before income tax (none captured yet)')}
+            (data.yearToDate.incomeTaxCents ? '' : noIncomeTaxWords(settings))}
           tone={data.yearToDate.profitCents < 0 ? 'bad' : undefined}
         />
         <Kpi label="Clients owe you" value={<Money cents={data.owing.totalCents} whole />} sub={data.owing.overdue ? `${data.owing.overdue} overdue` : 'nothing overdue'} tone={data.owing.overdue ? 'warn' : undefined} />
@@ -515,10 +515,10 @@ function OwnerHome() {
   );
 }
 
-/** Spent against quoted: amber past 85%, red over budget. */
 /** What Home's figures are, said under them (as Shap's MONEY_NOTE). */
 export const PROFIT_NOTE = 'Worked out from what’s captured in the books, to today. Rough guides to plan with, not advice.';
 
+/** Spent against quoted: amber past 85%, red over budget. */
 export function SpendBar({ spent, budget }: { spent: number; budget: number }) {
   const ratio = budget ? spent / budget : 0;
   const tone = ratio > 1 ? 'over' : ratio > 0.85 ? 'near' : '';

@@ -93,7 +93,7 @@ export function registerTaxFormRoutes(app: FastifyInstance, ctx: Ctx): void {
     }
     // VAT on journals typed in: not in the boxes, said so beside them.
     const hand = await handVat(sql, period.start, period.end);
-    return { category: cat, registered: settings.vatRegistered, vatNumber: settings.vatNumber, period, due: vat201Due(period.end), periods, fields: await vat201(sql, period.start, period.end), handVatCents: hand.cents, handVatLines: hand.lines };
+    return { category: cat, registered: settings.vatRegistered, vatNumber: settings.vatNumber, period, due: vat201Due(period.end), periods, fields: await vat201(sql, period.start, period.end), handVatAddedCents: hand.addedCents, handVatOffCents: hand.offCents, handVatLines: hand.lines };
   });
 
   /** Turnover tax for a year of assessment: turnover so far, the year projected, the two interim payments. */
