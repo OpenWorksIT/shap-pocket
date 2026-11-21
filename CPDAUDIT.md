@@ -188,5 +188,6 @@ Shap's CPD audit (section 7) has each review; what was Pocket's own:
   `review-shap-1.33-round6.test.ts`, `review-shap-1.33-round7.test.ts` (a company file keeps
   each account's line, a share's journal however its id is written, a move's amounts logged) and
   the `review-shap-1.33-round8-*` files (a closed year's entries counted as they are, a cost type's
-  kind, a sole proprietor's February year end from a company file, a journal id in an array), each
-  failing without its fix.
+  kind, a sole proprietor's February year end from a company file, a journal id in an array) and
+  `-round9-*` (a share value that can't be written as text, a company file's change of year end
+  logged), each failing without its fix.

@@ -245,7 +245,7 @@ describe('VAT on a journal typed in', () => {
     await owner.post('/api/journals', { date: p.start, description: 'Made-up cash sale', lines: [{ accountId: await r.acc('bank'), debitCents: 115_000 }, { accountId: await r.acc('revenue_other'), creditCents: 100_000 }, { accountId: await r.acc('vat'), creditCents: 15_000 }] });
     expect(await vat()).toMatchObject({ handVatAddedCents: 15_000, handVatOffCents: 0, handVatLines: 1 });
     const items = await expectCleanAudit(env.sql);
-    expect(items.some((i) => i.level === 'warn' && /^journals by hand moved the VAT account in \S+ to \S+ \(R\s?150\.00 added to the VAT owed\), apart from what Pocket can tell is a payment to or refund from SARS \(VAT against money or SARS’s other taxes; import VAT journalled against the bank looks the same, so it’s left out too\)/.test(i.text))).toBe(true);
+    expect(items.some((i) => i.level === 'warn' && /^journals by hand moved the VAT account in \S+ to \S+ \(R\s?150\.00 added to the VAT owed\), apart from what Pocket can tell is a payment to or refund from SARS \(VAT against money or SARS’s other taxes; import VAT journalled against the bank, cash, a card or your own money looks the same, so it’s left out too\)/.test(i.text))).toBe(true);
     const screen = readFileSync(join(__dirname, '..', '..', '..', 'apps', 'web', 'src', 'components', 'TaxForms.tsx'), 'utf8');
     expect(screen).toMatch(/added <Money cents=\{data\.handVatAddedCents!\} \/> to the VAT owed/);
     expect(screen).toMatch(/took <Money cents=\{data\.handVatOffCents!\} \/> off the VAT owed/);
