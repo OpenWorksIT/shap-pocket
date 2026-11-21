@@ -18,6 +18,9 @@ interface Vat201Data {
   due: string;
   periods: { start: string; end: string }[];
   fields: Record<string, number>;
+  /** VAT on journals typed in during the period (not payments): not in the boxes. */
+  handVatCents?: number;
+  handVatLines?: number;
 }
 
 const periodLabel = (p: { start: string; end: string }) =>
@@ -61,6 +64,11 @@ export function Vat201() {
       </div>
       <EstimateNote />
       {pending && <div className="banner signal small">This period hasn’t ended yet: the figures will still change.</div>}
+      {data.handVatLines ? (
+        <div className="banner alert small">
+          Journals typed in moved the VAT account by <Money cents={data.handVatCents ?? 0} /> in this period ({data.handVatLines} line{data.handVatLines === 1 ? '' : 's'}, not payments to SARS). The boxes below are worked out from invoices, costs and assets, so they leave these out: whether and where they go on the return (a cash sale, a correction) is yours or your accountant’s to decide before you file.
+        </div>
+      ) : null}
       <section className="panel">
         <div className="panel-head spread">
           <strong>VAT201 for {periodLabel(data.period)}</strong>

@@ -386,17 +386,19 @@ function OwnerHome() {
 
       <div className="kpis">
         <Kpi label={`Revenue ${data.financialYear.label} to date`} value={<Money cents={data.yearToDate.revenueCents} whole />} sub={`${data.thisMonth.label}: ${formatZar(data.thisMonth.revenueCents, { cents: false })}`} />
-        <Kpi label="Gross profit" value={<Money cents={data.yearToDate.grossProfitCents} whole />} sub={ytdMargin == null ? 'no revenue yet this year' : `${formatPercent(ytdMargin)} of revenue, as the financial statements count it`} />
+        <Kpi label="Gross profit" value={<Money cents={data.yearToDate.grossProfitCents} whole />} sub={ytdMargin == null ? 'no revenue yet this year' : `${formatPercent(ytdMargin)} of revenue (revenue less cost of sales, as the income statement sets them out)`} />
         <Kpi
           label="Net profit to date"
           value={<Money cents={data.yearToDate.profitCents} whole />}
           sub={[
             `after ${formatZar(data.yearToDate.runningCostsCents, { cents: false })} running costs`,
             data.yearToDate.financeCostsCents ? `${formatZar(data.yearToDate.financeCostsCents, { cents: false })} finance costs` : '',
-            data.yearToDate.incomeTaxCents ? `${formatZar(data.yearToDate.incomeTaxCents, { cents: false })} income tax as booked` : '',
+            data.yearToDate.incomeTaxCents ? `${formatZar(data.yearToDate.incomeTaxCents, { cents: false })} income tax as captured in the books` : '',
           ]
             .filter(Boolean)
-            .join(', ') + (data.yearToDate.otherIncomeCents ? `, with ${formatZar(data.yearToDate.otherIncomeCents, { cents: false })} other income` : '')}
+            .join(', ') +
+            (data.yearToDate.otherIncomeCents ? `, with ${formatZar(data.yearToDate.otherIncomeCents, { cents: false })} other income` : '') +
+            (data.yearToDate.incomeTaxCents ? '' : '; before income tax (none captured yet)')}
           tone={data.yearToDate.profitCents < 0 ? 'bad' : undefined}
         />
         <Kpi label="Clients owe you" value={<Money cents={data.owing.totalCents} whole />} sub={data.owing.overdue ? `${data.owing.overdue} overdue` : 'nothing overdue'} tone={data.owing.overdue ? 'warn' : undefined} />
@@ -406,6 +408,7 @@ function OwnerHome() {
           sub={data.owedToWorkersCents < 0 ? 'paid ahead of days worked' : 'earned, not yet paid'}
         />}
       </div>
+      <p className="xs muted">{PROFIT_NOTE}</p>
 
       <MarketNote />
       {needs.length > 0 && <div className="stack" style={{ gap: 8 }}>{needs}</div>}
@@ -513,6 +516,9 @@ function OwnerHome() {
 }
 
 /** Spent against quoted: amber past 85%, red over budget. */
+/** What Home's figures are, said under them (as Shap's MONEY_NOTE). */
+export const PROFIT_NOTE = 'Worked out from what’s captured in the books, to today. Rough guides to plan with, not advice.';
+
 export function SpendBar({ spent, budget }: { spent: number; budget: number }) {
   const ratio = budget ? spent / budget : 0;
   const tone = ratio > 1 ? 'over' : ratio > 0.85 ? 'near' : '';

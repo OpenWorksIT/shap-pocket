@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { addDays, addMonths, termsPoints } from '@shap/shared';
+import { addDays, addMonths, financialYear, latePayNote, termsPoints, vatPeriod } from '@shap/shared';
 import { today } from '../src/lib/books.js';
 import { fingerprints, parseStatementAmount } from '../src/modules/bank/parse.js';
 import { findRecurring } from '../src/modules/recurring.js';
@@ -71,8 +71,11 @@ describe('Home’s tiles: revenue first, and gross profit as the income statemen
     await owner.post(`/api/documents/${inv.id}/issue`);
     await owner.post('/api/costs', { date: day, description: 'Made-up parts', supplier: 'Made-up Supplies', amountCents: 300_000, categoryId: await r.cat('Parts'), sourceId: bank });
     await owner.post('/api/journals', { date: day, description: 'Interest (made up)', lines: [{ accountId: await r.acc('bank'), debitCents: 500_000 }, { accountId: await r.acc('interest_income'), creditCents: 500_000 }] });
-    // Interest paid: a finance cost, apart from running costs.
+    // Interest paid: a finance cost, apart from running costs. Income tax booked: apart too.
     await owner.post('/api/costs', { date: day, description: 'Made-up interest', supplier: 'Made-up Bank', amountCents: 20_000, categoryId: await r.cat('Interest'), sourceId: bank });
+    await owner.post('/api/journals', { date: day, description: 'Income tax (made up)', lines: [{ accountId: await r.acc('income_tax'), debitCents: 10_000 }, { accountId: await r.acc('bank'), creditCents: 10_000 }] });
+    // A running cost dated tomorrow: not "to date" yet, whatever day of the month it is.
+    await owner.post('/api/costs', { date: addDays(today(), 1), description: 'Made-up cover', supplier: 'Made-up Insurer', amountCents: 70_000, categoryId: await r.cat('Insurance'), sourceId: bank });
   });
   afterAll(async () => {
     await expectCleanAudit(env.sql);
@@ -87,14 +90,22 @@ describe('Home’s tiles: revenue first, and gross profit as the income statemen
     expect(y.otherIncomeCents).toBe(500_000);
     expect(y.financeCostsCents).toBe(20_000);
     expect(y.runningCostsCents).toBe(0);
+    expect(y.incomeTaxCents).toBe(10_000);
     expect(y.grossProfitCents + y.otherIncomeCents - y.runningCostsCents - y.financeCostsCents - y.incomeTaxCents).toBe(y.profitCents);
+    expect(y.profitCents).toBe(700_000 + 500_000 - 20_000 - 10_000);
     const home = readFileSync(join(__dirname, '..', '..', '..', 'apps', 'web', 'src', 'pages', 'Home.tsx'), 'utf8');
     expect(home).toMatch(/`Revenue \$\{data\.financialYear\.label\} to date`/);
-    expect(home).toMatch(/of revenue, as the financial statements count it`/);
+    // The words (Shap 1.33's fourth round): as the income statement sets them out, tax as captured,
+    // before tax when none is, and that they're rough guides, not advice.
+    expect(home).toMatch(/of revenue \(revenue less cost of sales, as the income statement sets them out\)`/);
+    expect(home).toMatch(/income tax as captured in the books`/);
+    expect(home).toMatch(/'; before income tax \(none captured yet\)'/);
+    expect(home).toMatch(/<p className="xs muted">\{PROFIT_NOTE\}<\/p>/);
+    expect(home).toMatch(/PROFIT_NOTE = 'Worked out from what’s captured in the books, to today\. Rough guides to plan with, not advice\.'/);
   });
 });
 
-describe('a pay date a year off, and a new bank account', () => {
+describe('a pay date a year off, a run paid late, and one that’s final', () => {
   let env: TestEnv;
   beforeAll(async () => {
     env = await setup();
@@ -104,26 +115,117 @@ describe('a pay date a year off, and a new bank account', () => {
     await env.close();
   });
 
-  it('refuses a pay date a year off its month', async () => {
+  it('refuses a pay date a year off its month, on a new run or a draft moved', async () => {
     const owner = await login(env.app);
     const bank = await (await ref(env.sql)).src('Business bank');
     const { settings: s } = await owner.get('/api/reference');
     await owner.post('/api/settings', { ...s, features: { ...s.features, payroll: true } }, 'PUT');
+    await owner.post('/api/employees', { name: 'Made-up Employee', salaryCents: 2_000_000, startDate: '2025-01-01' });
     const r = await owner.call({ method: 'POST', url: '/api/pay-runs', payload: { period: '2026-11', payDate: '2025-11-25', sourceId: bank } });
     expect(r.statusCode).toBe(400);
-    expect(r.json().error).toMatch(/looks like a slip of the year/);
+    expect(r.json().error).toMatch(/isn’t, so it may be a slip of the year or month\. For pay that really was that early or late, ask your accountant how to record it\./);
+    const run = await owner.post<{ id: string }>('/api/pay-runs', { period: '2026-10', payDate: '2026-10-25', sourceId: bank });
+    const moved = await owner.call({ method: 'PUT', url: `/api/pay-runs/${run.id}`, payload: { payDate: '2027-10-25', sourceId: bank } });
+    expect(moved.statusCode).toBe(400);
+    expect(moved.json().error).toMatch(/slip of the year or month/);
+    // Final: it says so, whatever the date.
+    await owner.post(`/api/pay-runs/${run.id}/finalise`);
+    const put = await owner.call({ method: 'PUT', url: `/api/pay-runs/${run.id}`, payload: { payDate: '2024-10-25', sourceId: bank } });
+    expect(put.statusCode).toBe(400);
+    expect(put.json().error).toMatch(/^This pay run is final\. Reopen it to change it\.$/);
   });
 
-  it('puts a new, empty bank account behind a payment source on the cash line, logged', async () => {
+  it('says which EMP201 is the accountant’s to check for a run paid more than a month late', () => {
+    expect(latePayNote('2026-10', '2026-11-30')).toBeNull();
+    expect(latePayNote('2026-10', '2026-12-01')).toMatch(/^Paid more than a month after October 2026\. Employees’ tax arises when the business pays or becomes liable to pay, so which EMP201 this goes on is for your accountant to check/);
+    expect(latePayNote('2027-01', '2027-04-25')).toMatch(/and which tax year’s tables,/);
+    const page = readFileSync(join(__dirname, '..', '..', '..', 'apps', 'web', 'src', 'pages', 'Payroll.tsx'), 'utf8');
+    expect(page).toMatch(/<Field label="Pay date" hint=\{latePayNote\(run\.period, run\.payDate\) \?\? undefined\}>/);
+  });
+});
+
+// Shap 1.33's fourth round (IFRS): Pocket doesn't move an account onto the cash line (whether it's
+// cash is a judgement), and the books audit says so, with the test for an asset and a liability.
+describe('a bank account that isn’t on the cash line', () => {
+  let env: TestEnv;
+  beforeAll(async () => {
+    env = await setup();
+  });
+  afterAll(async () => {
+    await expectCleanAudit(env.sql);
+    await env.close();
+  });
+
+  it('keeps the line it was given, renamed or moved, an asset’s or a liability’s', async () => {
     const owner = await login(env.app);
+    const lineOf = async (code: string) => (await env.sql<{ l: string }[]>`select statement_line as l from accounts where code = ${code}`)[0]!.l;
     const acc = await owner.post<{ id: string }>('/api/accounts', { code: '1070', name: 'Made-up Savings', type: 'asset', active: true });
-    await owner.post('/api/sources', { name: 'Made-up savings', kind: 'bank', accountId: acc.id });
-    const [line] = await env.sql<{ statementLine: string }[]>`select statement_line from accounts where id = ${acc.id}`;
-    expect(line!.statementLine).toBe('cash');
-    const [old] = await env.sql<{ id: string }[]>`insert into accounts (code, name, type, statement_line) values ('1080', 'Made-up Old Savings', 'asset', 'other_current_assets') returning id`;
-    await env.sql`insert into payment_sources (name, kind, account_id, sort) values ('Made-up old savings', 'bank', ${old!.id}, 99)`;
+    const src = await owner.post<{ id: string }>('/api/sources', { name: 'Made-up savings', kind: 'bank', accountId: acc.id });
+    expect(await lineOf('1070')).toBe('other_current_assets');
+    await owner.post(`/api/sources/${src.id}`, { name: 'Made-up savings (renamed)', kind: 'bank', accountId: acc.id }, 'PUT');
+    expect(await lineOf('1070')).toBe('other_current_assets');
+    const other = await owner.post<{ id: string }>('/api/accounts', { code: '1071', name: 'Made-up Savings Two', type: 'asset', active: true });
+    await owner.post(`/api/sources/${src.id}`, { name: 'Made-up savings (renamed)', kind: 'bank', accountId: other.id }, 'PUT');
+    expect(await lineOf('1071')).toBe('other_current_assets');
+    const od = await owner.post<{ id: string }>('/api/accounts', { code: '2320', name: 'Made-up Facility', type: 'liability', active: true });
+    await owner.post('/api/sources', { name: 'Made-up facility', kind: 'bank', accountId: od.id });
+    expect(await lineOf('2320')).toBe('trade_payables');
+    const [logged] = await env.sql<{ n: number }[]>`select count(*)::int as n from audit_log where action = 'account_to_cash_line'`;
+    expect(Number(logged!.n)).toBe(0);
+    const warned = (await expectCleanAudit(env.sql)).filter((i) => i.level === 'warn').map((i) => i.text);
+    expect(warned.some((t) => /^Made-up Savings Two is a bank or cash account you pay from, but not on the statements' cash line\. Whether it's cash is a judgement \(money that can be drawn at short notice is; a deposit fixed for more than about three months usually isn't\): the cash flow statement leaves it out of cash/.test(t))).toBe(true);
+    expect(warned.some((t) => /^Made-up Facility is a liability you pay from as a bank account, but not on the statements' cash or bank overdraft line\. A bank overdraft counts as cash only when it's repayable on demand and part of day-to-day cash management/.test(t))).toBe(true);
+    // Pocket's Home shows no cash figure: the audit doesn't say it does.
+    expect(warned.join(' ')).not.toMatch(/Home/);
+    await env.sql`delete from payment_sources where account_id in (${other.id}, ${od.id})`;
+  });
+
+  it('still points out one closed this year that held money at last year end, not one long gone', async () => {
+    const owner = await login(env.app);
+    const { settings } = await owner.get('/api/reference');
+    const fy = financialYear(today(), settings.fyEndMonth);
+    const bankAccount = await (await ref(env.sql)).acc('bank');
+    const closed = async (code: string, name: string, into: string, out: string) => {
+      const [acc] = await env.sql<{ id: string }[]>`insert into accounts (code, name, type, statement_line) values (${code}, ${name}, 'asset', 'other_current_assets') returning id`;
+      await env.sql`insert into payment_sources (name, kind, account_id, sort, active) values (${name.toLowerCase()}, 'bank', ${acc!.id}, 98, false)`;
+      await owner.post('/api/journals', { date: into, description: 'To savings (made up)', lines: [{ accountId: acc!.id, debitCents: 500_000 }, { accountId: bankAccount, creditCents: 500_000 }] });
+      await owner.post('/api/journals', { date: out, description: 'Savings closed (made up)', lines: [{ accountId: bankAccount, debitCents: 500_000 }, { accountId: acc!.id, creditCents: 500_000 }] });
+    };
+    await closed('1085', 'Made-up Closed Savings', addDays(fy.start, -20), fy.start);
+    const lastYearStart = financialYear(addDays(fy.start, -1), settings.fyEndMonth).start;
+    await closed('1086', 'Made-up Long Gone', addDays(lastYearStart, -20), addDays(lastYearStart, -10));
+    const warned = (await expectCleanAudit(env.sql)).filter((i) => i.level === 'warn').map((i) => i.text).join(' ');
+    expect(warned).toMatch(/Made-up Closed Savings/);
+    expect(warned).not.toMatch(/Made-up Long Gone/);
+  });
+});
+
+// Shap 1.33's fourth round (SARS): VAT on a journal typed in isn't in the VAT201's boxes: said so.
+describe('VAT on a journal typed in', () => {
+  let env: TestEnv;
+  beforeAll(async () => {
+    env = await setup();
+  });
+  afterAll(async () => {
+    await expectCleanAudit(env.sql);
+    await env.close();
+  });
+
+  it('is said beside the VAT201 and in the books audit; a payment to SARS with its interest isn’t', async () => {
+    const owner = await login(env.app);
+    const r = await ref(env.sql);
+    const { settings } = await owner.get('/api/reference');
+    await owner.post('/api/settings', { ...settings, vatRegistered: true, vatNumber: '4000000002', vatCategory: 'C' }, 'PUT');
+    const p = vatPeriod(today(), 'C', settings.fyEndMonth);
+    const [fin] = await env.sql<{ id: string }[]>`insert into accounts (code, name, type, statement_line) values ('6910', 'Made-up SARS interest', 'expense', 'finance_costs') returning id`;
+    await owner.post('/api/journals', { date: p.start, description: 'Made-up VAT paid, with interest', lines: [{ accountId: await r.acc('vat'), debitCents: 50_000 }, { accountId: fin!.id, debitCents: 1_000 }, { accountId: await r.acc('bank'), creditCents: 51_000 }] });
+    const vat = () => owner.get<{ handVatCents: number; handVatLines: number }>(`/api/vat/return?on=${p.start}`);
+    expect(await vat()).toMatchObject({ handVatCents: 0, handVatLines: 0 });
+    await owner.post('/api/journals', { date: p.start, description: 'Made-up cash sale', lines: [{ accountId: await r.acc('bank'), debitCents: 115_000 }, { accountId: await r.acc('revenue_other'), creditCents: 100_000 }, { accountId: await r.acc('vat'), creditCents: 15_000 }] });
+    expect(await vat()).toMatchObject({ handVatCents: 15_000, handVatLines: 1 });
     const items = await expectCleanAudit(env.sql);
-    expect(items.some((i) => i.level === 'warn' && /Made-up Old Savings is a bank or cash account you pay from/.test(i.text))).toBe(true);
-    await env.sql`delete from payment_sources where account_id = ${old!.id}`;
+    expect(items.some((i) => i.level === 'warn' && /^journals typed in moved the VAT account in .*, other than as payments to SARS/.test(i.text))).toBe(true);
+    const screen = readFileSync(join(__dirname, '..', '..', '..', 'apps', 'web', 'src', 'components', 'TaxForms.tsx'), 'utf8');
+    expect(screen).toMatch(/Journals typed in moved the VAT account by <Money cents=\{data\.handVatCents \?\? 0\} \/> in this period/);
   });
 });

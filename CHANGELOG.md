@@ -14,13 +14,19 @@ What changed in each version of Shap Pocket, newest first.
   - What you're responsible for filing and paying names CIPC and the Compensation Fund with SARS and
     the Department of Employment and Labour (the terms already said so; this is the summary of them).
   - Home's first figure is your revenue this year (it was all income, interest included), and gross
-    profit is revenue less cost of sales, as the income statement has it; net profit says the running
-    costs, finance costs, income tax and other income that bring gross profit to it, to today.
-  - A new bank or cash payment source on an account with nothing in it yet puts that account on the
-    statements' cash (or bank overdraft) line; the books audit points out one that isn't, for your
-    accountant to judge.
+    profit is revenue less cost of sales, as the income statement sets them out; net profit says the
+    running costs, finance costs, income tax (as captured in the books) and other income that bring
+    gross profit to it, to today, and says it's before income tax when none is captured. Under them:
+    rough guides worked out from the books, not advice.
+  - The books audit points out a bank or cash account you pay from that isn't on the statements'
+    cash line (one emptied and closed this year too), with the test for an account and for an
+    overdraft, for you and your accountant to judge: Pocket doesn't move its line.
   - A pay date before the month before its run's month, or more than six months after it, is
-    refused as a likely slip of the year (it would be taxed on the wrong tables).
+    refused as a likely slip of the year or month (it would be taxed on the wrong tables). A run paid
+    more than a month after its month says that which EMP201 it goes on is your accountant's to check.
+  - When journals typed in (a cash sale journalled, a correction) moved the VAT account in a period,
+    other than as payments to SARS, the VAT201 screen and the books audit say by how much: the boxes
+    are worked out from invoices, costs and assets, so they leave those out.
 
 ## 1.11.3 (18 November 2026)
 

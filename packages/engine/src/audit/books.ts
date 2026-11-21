@@ -22,13 +22,13 @@
  * audit (deploy/vps/audit-server.sh) and by the tests, which also break the books on purpose to
  * see each check catch it (test/books-audit.test.ts).
  */
-import { featureOn, financialYear, formatZar, needsFullTaxInvoice, vatIncluded, vatPeriod, vatRateOn } from '@shap/shared';
+import { addDays, featureOn, financialYear, formatZar, needsFullTaxInvoice, vatIncluded, vatPeriod, vatRateOn } from '@shap/shared';
 import type { Ctx } from '../context.js';
 
 type Db = Ctx['sql'];
 /** Journals typed in, not made by the app from a pay run, a SARS payment, a dividend or a profit share. */
 const BY_HAND = ['manual', 'opening', 'import', 'adjustment'];
-import { effectiveLock, freshTotals, getSettings, today } from '../lib/books.js';
+import { effectiveLock, freshTotals, getSettings, handVat, today } from '../lib/books.js';
 import { FULL_TAX_INVOICE_CENTS } from '../modules/documents.js';
 import { balanceSheet, trialBalance } from '../modules/reports.js';
 import { vat201 } from '../modules/taxforms.js';
@@ -110,16 +110,27 @@ export async function auditBooks(db: Db, on = today()): Promise<AuditItem[]> {
   const suspense = await balance('suspense');
   if (suspense === 0) ok('nothing is waiting in suspense');
   else warn(`${rand(suspense)} is in suspense: money not yet put where it belongs (or a change to an agreed year)`);
-  // A bank or cash account paid from that the statements don't count as cash (Shap 1.33).
-  const offCash = await db<{ name: string }[]>`
-    select distinct a.name from payment_sources ps join accounts a on a.id = ps.account_id
+  // A bank or cash account paid from that the statements don't count as cash (Shap 1.33): an
+  // active one, or one with anything in it since the start of last year (the comparative year's
+  // cash rests on it too). Pocket doesn't move its line: whether it's cash is a judgement (7.2).
+  const comparativeStart = financialYear(addDays(fyNow.start, -1), settings.fyEndMonth).start;
+  const offCash = await db<{ name: string; type: string }[]>`
+    select distinct a.name, a.type from payment_sources ps join accounts a on a.id = ps.account_id
     where ps.kind in ('bank', 'cash') and a.system_key is distinct from 'owner_loan'
-      and ((a.type = 'asset' and a.statement_line is distinct from 'cash') or (a.type = 'liability' and a.statement_line not in ('cash', 'bank_overdraft')))
-      and (ps.active or exists (select 1 from ledger_totals l where l.account_id = a.id having sum(l.amount_cents) <> 0))
+      and ((a.type = 'asset' and a.statement_line is distinct from 'cash') or (a.type = 'liability' and coalesce(a.statement_line, '') not in ('cash', 'bank_overdraft')))
+      and (ps.active or exists (select 1 from ledger_totals l where l.account_id = a.id and l.date >= ${comparativeStart}::date))
     order by 1`;
-  if (offCash.length)
+  const after = (many: boolean) =>
+    `: the cash flow statement leaves ${many ? 'them' : 'it'} out of cash. Check it with your accountant before changing its line (Settings → Lists → Chart of accounts): moving it also moves last year's figures, which your accountant may need to explain in the statements`;
+  const assetsOff = offCash.filter((a) => a.type === 'asset').map((a) => a.name);
+  if (assetsOff.length)
     warn(
-      `${few(offCash.map((a) => a.name))} ${offCash.length === 1 ? 'is a bank or cash account' : 'are bank or cash accounts'} you pay from, but not on the statements' cash or bank overdraft line: Home and the cash flow statement leave ${offCash.length === 1 ? 'it' : 'them'} out of cash. Whether it's cash is a judgement (a deposit for more than about three months isn't), so check it with your accountant before changing its line (Settings → Lists → Chart of accounts): moving it also moves last year's figures, which your accountant may need to explain in the statements`,
+      `${few(assetsOff)} ${assetsOff.length === 1 ? 'is a bank or cash account' : 'are bank or cash accounts'} you pay from, but not on the statements' cash line. Whether it's cash is a judgement (money that can be drawn at short notice is; a deposit fixed for more than about three months usually isn't)${after(assetsOff.length > 1)}`,
+    );
+  const owingOff = offCash.filter((a) => a.type === 'liability').map((a) => a.name);
+  if (owingOff.length)
+    warn(
+      `${few(owingOff)} ${owingOff.length === 1 ? 'is a liability' : 'are liabilities'} you pay from as a bank account, but not on the statements' cash or bank overdraft line. A bank overdraft counts as cash only when it's repayable on demand and part of day-to-day cash management (otherwise it's borrowing, as a loan is)${after(owingOff.length > 1)}`,
     );
 
   // ---------------------------------------------------------------- control accounts
@@ -155,7 +166,11 @@ export async function auditBooks(db: Db, on = today()): Promise<AuditItem[]> {
       periods.set(p.start, p);
     }
     const off: string[] = [];
+    // VAT on journals typed in: not on the VAT201, for the accountant to place on the return.
+    const typedIn: string[] = [];
     for (const p of periods.values()) {
+      const hand = await handVat(db, p.start, p.end);
+      if (hand.lines) typedIn.push(`${p.start} to ${p.end} (${rand(hand.cents)})`);
       const f = await vat201(db, p.start, p.end);
       const [mv] = await db<{ t: number }[]>`
         select coalesce(sum(l.amount_cents), 0)::bigint as t from ledger_totals l join accounts a on a.id = l.account_id
@@ -166,6 +181,8 @@ export async function auditBooks(db: Db, on = today()): Promise<AuditItem[]> {
     }
     if (!off.length) ok(`the VAT account moved by what Shap's VAT201 shows for each period of the last year (${periods.size} periods)`);
     else fail(`the VAT201 and the VAT account disagree for ${few(off, 3)}`);
+    if (typedIn.length)
+      warn(`journals typed in moved the VAT account in ${few(typedIn, 3)}, other than as payments to SARS: the VAT201 is worked out from invoices, costs and assets, so it leaves them out. Whether and where they go on the return is the business's or their accountant's to decide`);
   } else ok('not registered for VAT: no VAT201s to check');
 
   const sars = await db<{ owed: number }[]>`
