@@ -71,6 +71,8 @@ describe('Home’s tiles: revenue first, and gross profit as the income statemen
     await owner.post(`/api/documents/${inv.id}/issue`);
     await owner.post('/api/costs', { date: day, description: 'Made-up parts', supplier: 'Made-up Supplies', amountCents: 300_000, categoryId: await r.cat('Parts'), sourceId: bank });
     await owner.post('/api/journals', { date: day, description: 'Interest (made up)', lines: [{ accountId: await r.acc('bank'), debitCents: 500_000 }, { accountId: await r.acc('interest_income'), creditCents: 500_000 }] });
+    // Interest paid: a finance cost, apart from running costs.
+    await owner.post('/api/costs', { date: day, description: 'Made-up interest', supplier: 'Made-up Bank', amountCents: 20_000, categoryId: await r.cat('Interest'), sourceId: bank });
   });
   afterAll(async () => {
     await expectCleanAudit(env.sql);
@@ -83,9 +85,45 @@ describe('Home’s tiles: revenue first, and gross profit as the income statemen
     expect(y.revenueCents).toBe(1_000_000);
     expect(y.grossProfitCents).toBe(700_000);
     expect(y.otherIncomeCents).toBe(500_000);
-    expect(y.grossProfitCents + y.otherIncomeCents - y.runningCostsCents).toBe(y.profitCents);
+    expect(y.financeCostsCents).toBe(20_000);
+    expect(y.runningCostsCents).toBe(0);
+    expect(y.grossProfitCents + y.otherIncomeCents - y.runningCostsCents - y.financeCostsCents - y.incomeTaxCents).toBe(y.profitCents);
     const home = readFileSync(join(__dirname, '..', '..', '..', 'apps', 'web', 'src', 'pages', 'Home.tsx'), 'utf8');
     expect(home).toMatch(/`Revenue \$\{data\.financialYear\.label\} to date`/);
-    expect(home).toMatch(/of revenue`/);
+    expect(home).toMatch(/of revenue, as the financial statements count it`/);
+  });
+});
+
+describe('a pay date a year off, and a new bank account', () => {
+  let env: TestEnv;
+  beforeAll(async () => {
+    env = await setup();
+  });
+  afterAll(async () => {
+    await expectCleanAudit(env.sql);
+    await env.close();
+  });
+
+  it('refuses a pay date a year off its month', async () => {
+    const owner = await login(env.app);
+    const bank = await (await ref(env.sql)).src('Business bank');
+    const { settings: s } = await owner.get('/api/reference');
+    await owner.post('/api/settings', { ...s, features: { ...s.features, payroll: true } }, 'PUT');
+    const r = await owner.call({ method: 'POST', url: '/api/pay-runs', payload: { period: '2026-11', payDate: '2025-11-25', sourceId: bank } });
+    expect(r.statusCode).toBe(400);
+    expect(r.json().error).toMatch(/looks like a slip of the year/);
+  });
+
+  it('puts a new, empty bank account behind a payment source on the cash line, logged', async () => {
+    const owner = await login(env.app);
+    const acc = await owner.post<{ id: string }>('/api/accounts', { code: '1070', name: 'Made-up Savings', type: 'asset', active: true });
+    await owner.post('/api/sources', { name: 'Made-up savings', kind: 'bank', accountId: acc.id });
+    const [line] = await env.sql<{ statementLine: string }[]>`select statement_line from accounts where id = ${acc.id}`;
+    expect(line!.statementLine).toBe('cash');
+    const [old] = await env.sql<{ id: string }[]>`insert into accounts (code, name, type, statement_line) values ('1080', 'Made-up Old Savings', 'asset', 'other_current_assets') returning id`;
+    await env.sql`insert into payment_sources (name, kind, account_id, sort) values ('Made-up old savings', 'bank', ${old!.id}, 99)`;
+    const items = await expectCleanAudit(env.sql);
+    expect(items.some((i) => i.level === 'warn' && /Made-up Old Savings is a bank or cash account you pay from/.test(i.text))).toBe(true);
+    await env.sql`delete from payment_sources where account_id = ${old!.id}`;
   });
 });

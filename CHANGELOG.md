@@ -15,7 +15,12 @@ What changed in each version of Shap Pocket, newest first.
     the Department of Employment and Labour (the terms already said so; this is the summary of them).
   - Home's first figure is your revenue this year (it was all income, interest included), and gross
     profit is revenue less cost of sales, as the income statement has it; net profit says the running
-    costs and other income that bring gross profit to it.
+    costs, finance costs, income tax and other income that bring gross profit to it, to today.
+  - A new bank or cash payment source on an account with nothing in it yet puts that account on the
+    statements' cash (or bank overdraft) line; the books audit points out one that isn't, for your
+    accountant to judge.
+  - A pay date before the month before its run's month, or more than six months after it, is
+    refused as a likely slip of the year (it would be taxed on the wrong tables).
 
 ## 1.11.3 (18 November 2026)
 
