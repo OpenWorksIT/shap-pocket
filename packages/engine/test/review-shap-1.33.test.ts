@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { addMonths, termsPoints } from '@shap/shared';
+import { addDays, addMonths, termsPoints } from '@shap/shared';
 import { today } from '../src/lib/books.js';
 import { fingerprints, parseStatementAmount } from '../src/modules/bank/parse.js';
 import { findRecurring } from '../src/modules/recurring.js';
@@ -53,5 +55,37 @@ describe('what you file and pay', () => {
   it('names CIPC and the Compensation Fund with SARS and the Department of Employment and Labour', () => {
     const filing = termsPoints('pocket').find((p) => p.title === 'You are responsible for what you file and pay')!;
     expect(filing.body).toMatch(/SARS, the Department of Employment and Labour, CIPC and the Compensation Fund/);
+  });
+});
+
+describe('Home’s tiles: revenue first, and gross profit as the income statement’s', () => {
+  let env: TestEnv;
+  beforeAll(async () => {
+    env = await setup();
+    const owner = await login(env.app);
+    const r = await ref(env.sql);
+    const bank = await r.src('Business bank');
+    const day = addDays(today(), -3);
+    const client = await owner.post('/api/clients', { name: 'Made-up Client' });
+    const inv = await owner.post('/api/documents', { kind: 'invoice', clientId: client.id, issueDate: day, lines: [{ category: 'labour', description: 'Work', qty: 1, unitPriceCents: 1_000_000 }] });
+    await owner.post(`/api/documents/${inv.id}/issue`);
+    await owner.post('/api/costs', { date: day, description: 'Made-up parts', supplier: 'Made-up Supplies', amountCents: 300_000, categoryId: await r.cat('Parts'), sourceId: bank });
+    await owner.post('/api/journals', { date: day, description: 'Interest (made up)', lines: [{ accountId: await r.acc('bank'), debitCents: 500_000 }, { accountId: await r.acc('interest_income'), creditCents: 500_000 }] });
+  });
+  afterAll(async () => {
+    await expectCleanAudit(env.sql);
+    await env.close();
+  });
+
+  it('leaves interest out of revenue and gross profit, and the tiles add up', async () => {
+    const owner = await login(env.app);
+    const y = (await owner.get('/api/dashboard')).yearToDate;
+    expect(y.revenueCents).toBe(1_000_000);
+    expect(y.grossProfitCents).toBe(700_000);
+    expect(y.otherIncomeCents).toBe(500_000);
+    expect(y.grossProfitCents + y.otherIncomeCents - y.runningCostsCents).toBe(y.profitCents);
+    const home = readFileSync(join(__dirname, '..', '..', '..', 'apps', 'web', 'src', 'pages', 'Home.tsx'), 'utf8');
+    expect(home).toMatch(/`Revenue \$\{data\.financialYear\.label\} to date`/);
+    expect(home).toMatch(/of revenue`/);
   });
 });

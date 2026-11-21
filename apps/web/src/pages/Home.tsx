@@ -20,8 +20,8 @@ import type { ProjectRow } from '../lib/types';
 interface Dashboard {
   today: string;
   financialYear: { start: string; end: string; label: string };
-  thisMonth: { label: string; incomeCents: number; costOfSalesCents: number; expensesCents: number; profitCents: number };
-  yearToDate: { incomeCents: number; grossProfitCents: number; expensesCents: number; profitCents: number };
+  thisMonth: { label: string; incomeCents: number; costOfSalesCents: number; expensesCents: number; profitCents: number; revenueCents: number };
+  yearToDate: { incomeCents: number; revenueCents: number; grossProfitCents: number; expensesCents: number; profitCents: number; otherIncomeCents: number; runningCostsCents: number };
   months: { key: string; label: string; incomeCents: number; costOfSalesCents: number; expensesCents: number }[];
   owing: { totalCents: number; overdue: number; invoices: { id: string; number: string; issueDate: string; totalCents: number; paidCents: number; clientName: string | null; projectName: string | null; paymentState: string }[] };
   workers: { id: string; name: string; balanceCents: number }[];
@@ -68,7 +68,8 @@ function OwnerHome() {
   useMinuteTick();
   if (error) return <ErrorBox error={error} onRetry={reload} />;
   if (!data) return <Loading />;
-  const ytdMargin = data.yearToDate.incomeCents ? data.yearToDate.grossProfitCents / data.yearToDate.incomeCents : null;
+  // Gross profit as the income statement has it: revenue less cost of sales, as a share of revenue.
+  const ytdMargin = data.yearToDate.revenueCents > 0 ? data.yearToDate.grossProfitCents / data.yearToDate.revenueCents : null;
   const lastSaved = lastBackup();
   const backupDays = lastSaved ? Math.floor((Date.now() - lastSaved.getTime()) / 86_400_000) : null;
   const billsLate = (data.billsDue ?? []).filter((b) => (b.dueDate ?? b.date) < data.today);
@@ -384,9 +385,14 @@ function OwnerHome() {
       />
 
       <div className="kpis">
-        <Kpi label={`Invoiced ${data.financialYear.label} to date`} value={<Money cents={data.yearToDate.incomeCents} whole />} sub={`${data.thisMonth.label}: ${formatZar(data.thisMonth.incomeCents, { cents: false })}`} />
-        <Kpi label="Gross profit" value={<Money cents={data.yearToDate.grossProfitCents} whole />} sub={`${formatPercent(ytdMargin)} of invoiced`} />
-        <Kpi label="Net profit to date" value={<Money cents={data.yearToDate.profitCents} whole />} sub={`after ${formatZar(data.yearToDate.expensesCents, { cents: false })} running costs`} tone={data.yearToDate.profitCents < 0 ? 'bad' : undefined} />
+        <Kpi label={`Revenue ${data.financialYear.label} to date`} value={<Money cents={data.yearToDate.revenueCents} whole />} sub={`${data.thisMonth.label}: ${formatZar(data.thisMonth.revenueCents, { cents: false })}`} />
+        <Kpi label="Gross profit" value={<Money cents={data.yearToDate.grossProfitCents} whole />} sub={ytdMargin == null ? 'no revenue yet this year' : `${formatPercent(ytdMargin)} of revenue`} />
+        <Kpi
+          label="Net profit to date"
+          value={<Money cents={data.yearToDate.profitCents} whole />}
+          sub={`after ${formatZar(data.yearToDate.runningCostsCents, { cents: false })} running costs${data.yearToDate.otherIncomeCents ? `, with ${formatZar(data.yearToDate.otherIncomeCents, { cents: false })} other income` : ''}`}
+          tone={data.yearToDate.profitCents < 0 ? 'bad' : undefined}
+        />
         <Kpi label="Clients owe you" value={<Money cents={data.owing.totalCents} whole />} sub={data.owing.overdue ? `${data.owing.overdue} overdue` : 'nothing overdue'} tone={data.owing.overdue ? 'warn' : undefined} />
         {has('workers') && <Kpi
           label={data.owedToWorkersCents < 0 ? 'Advanced to workers' : 'You owe workers'}

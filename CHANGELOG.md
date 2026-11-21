@@ -6,12 +6,16 @@ What changed in each version of Shap Pocket, newest first.
 
 - From Shap's reviews of 1.33, in the code Pocket shares with it:
   - A bank statement's amounts written -.50 or 1.234,56 (a full stop between thousands, a comma
-    before the cents) are read right: they were skipped, or read as a hundredth of the amount.
+    before the cents) are read right: -.50 was skipped, and 1.234,56 read as about a thousandth
+    (R1.23). If your bank writes amounts this way, check statements you brought in before.
   - A statement line with a very long description no longer stops the statement coming in.
   - A cost you pay each month is watched on the account you last paid it from: moved from a card to
     the bank, it's the bank's now.
   - What you're responsible for filing and paying names CIPC and the Compensation Fund with SARS and
     the Department of Employment and Labour (the terms already said so; this is the summary of them).
+  - Home's first figure is your revenue this year (it was all income, interest included), and gross
+    profit is revenue less cost of sales, as the income statement has it; net profit says the running
+    costs and other income that bring gross profit to it.
 
 ## 1.11.3 (18 November 2026)
 
