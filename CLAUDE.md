@@ -9,6 +9,11 @@ that didn't write the change, their findings fixed with tests; then CI green.
 - **Tests with every change.** A fix comes with a test that fails without it. A test that builds
   books ends with `expectCleanAudit`.
 - **Shap** (OpenWorksIT/shap) shares the accounting code: the same fixes go there, and come here.
+- **Work goes on `develop`**, not main. Its draft pull request into main runs the tests and builds
+  on every push. A pull request run also sends an iPhone build to TestFlight while the signing
+  secrets are set. main moves only at a release, once the CPD audit is done, because a push to main
+  deploys the web app and runs the store builds. Fast-forward main to `develop`'s audited commit,
+  then open a new draft pull request from `develop`.
 - **The engine runs in the app**: nothing in `packages/engine/src` imports Node's own modules.
 - **New outside addresses** go on `.github/hosts.json`; nothing personal leaves the phone without
   the owner's yes.
