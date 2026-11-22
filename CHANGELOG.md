@@ -2,6 +2,23 @@
 
 What changed in each version of Shap Pocket, newest first.
 
+## Unreleased (on develop, before the CPD audit)
+
+- **Leave, every kind of it** (from Shap, in the code Pocket shares). Payroll → Leave: annual,
+  sick and family responsibility leave in their BCEA cycles, maternity, parental, adoption and
+  commissioning parental leave (the parents share four months and ten days since the
+  Constitutional Court's Van Wyk order of 3 October 2025), and unpaid or other leave, with each
+  person's balances and what to look at. Someone already on payroll has their leave records start
+  today: give what they were owed then under Employees. Unpaid days come off the month's draft pay
+  run at a day's pay; someone leaving is paid the annual leave they're owed, taxed as an annual
+  payment. The payslip shows the leave. Once a year has ended, you book the annual leave pay owed
+  at its end (IFRS for SMEs 28.6); the books audit and the statements' checks say when it's
+  missing or out of date, and the tax figures add the year's increase back (s7B). Figures from
+  the leave records, for you and your accountant to check. docs/LEAVE.md.
+- From Shap's 1.33 audit, what it noted, put right in the shared code: an asset made from a cost
+  checks the cost's own period is open; a cost type's change of kind is in the audit log with what
+  it moved; a used payment account can't carry its history to another line of the statements.
+
 ## 1.11.4 (21 November 2026)
 
 - From Shap's reviews of 1.33, in the code Pocket shares with it:
